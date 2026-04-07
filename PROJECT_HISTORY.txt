@@ -1,0 +1,105 @@
+Schedule Tracker Hub - Project History
+======================================
+
+Purpose
+-------
+This file is a simple running history of the project so work can continue
+even if the chat thread is lost. Keep updating it as the project changes.
+
+Project Location
+----------------
+Local path: D:\PranavData\scheduleTrackerProject
+GitHub repo: https://github.com/pranavkagrawal02/scheduletrackerproject
+
+How To Run
+----------
+1. Open terminal in: D:\PranavData\scheduleTrackerProject
+2. Run:
+   npm install
+   set PORT=3001
+   npm start
+3. Open:
+   http://127.0.0.1:3001
+4. Login:
+   username: admin
+   password: admin
+
+Current Data Setup
+------------------
+- For now the app uses db.json as the internal database.
+- SQL Server support has now been added for local SSMS / SQLEXPRESS use.
+- If SQL env vars are not set, the app still falls back to `db.json`.
+- `server.js` now supports loading a local `.env` file automatically.
+- Current SQL path expects:
+  - server: `localhost`
+  - database: `ScheduleTracker`
+  - SQL login: `scheduleapp`
+  - SQL password: `Schedule@123` (or the user-chosen replacement)
+- Current blocker found on this machine:
+  - `SQLEXPRESS` is set to `LoginMode = 1` which means Windows Authentication only
+  - app login for SQL user `scheduleapp` cannot work until mixed mode is enabled and SQL Server is restarted
+
+Current Product State
+---------------------
+- Login page works.
+- Left side of login page now only shows: Welcome
+- Dashboard layout is active.
+- Dashboard top area stays in its original compact layout.
+- Non-dashboard sections have a browser-like workspace tab row.
+- Schedules, Projects, Leave, and Meetings support a + button for future tabs.
+- Extra non-dashboard tabs currently open placeholder workspace panels.
+- Sidebar now shows an Upcoming... card instead of the old status card.
+- Upcoming card shows:
+  - important task
+  - meeting summary
+  - nearest upcoming meeting countdown when time can be inferred
+- Sidebar stays visually consistent on larger screens.
+- Scope chips at top right behave like selected widgets.
+
+Recent Completed Work
+---------------------
+- Prepared project for Firebase Hosting + Cloud Run + PostgreSQL later.
+- Kept local JSON file workflow for now.
+- Added public/ sync flow for deployable frontend files.
+- Updated README with Windows-first run instructions.
+- Pushed latest code to GitHub.
+- Removed the extra Firestore and GitHub deploy scaffolding to keep the project local-only.
+- Added SQL Server store support for the local app.
+- Documented SQL login creation in SSMS for `scheduleapp`.
+- Confirmed current SQL connection issue is auth mode mismatch, not a JavaScript syntax error.
+- Added automatic `.env` loading so SQL config does not have to be re-entered in every terminal.
+
+Latest Git Status Reference
+---------------------------
+Recent pushed commit:
+- d4bfb90  Add upcoming sidebar summary and document workspace tabs
+
+Earlier important commit:
+- 31b610d  Refine dashboard workspace tabs and update docs
+
+What To Tell Codex Next Time
+----------------------------
+Suggested summary:
+
+"Continue Schedule Tracker Hub from PROJECT_HISTORY.txt.
+The app can now run either on db.json or local SQL Server.
+Do not change dashboard top layout unless I ask.
+Current focus is SQL Server connection and local feature work.
+Check whether SQLEXPRESS mixed mode has been enabled before testing scheduleapp again."
+
+Open Items / Next Ideas
+-----------------------
+- Add true starred or important task support instead of using first open task.
+- Turn non-dashboard placeholder tabs into real feature tabs.
+- Expand schedule-related sub-tabs from the + menu.
+- Finish validating SQL Server login and end-to-end app login flow.
+
+Update Log Template
+-------------------
+Copy this block and add new notes below it whenever something changes:
+
+Date:
+What changed:
+Files touched:
+Git commit:
+Next step:

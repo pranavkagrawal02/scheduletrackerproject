@@ -10,12 +10,12 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <p class="eyebrow">Control Center</p>
-        <h2>Schedule Tracker</h2>
+        <img class="sidebar-brand-image" src="images/nielit-image.svg" alt="NIELIT logo">
       </div>
 
       <nav class="sidebar-nav">
         <button class="nav-link active" type="button" data-view="dashboard">Dashboard</button>
+        <button class="nav-link" type="button" data-view="organization">Organization</button>
         <button class="nav-link" type="button" data-view="schedules">Schedules</button>
         <button class="nav-link" type="button" data-view="projects">Projects</button>
         <button class="nav-link" type="button" data-view="leave">Leave</button>
@@ -94,29 +94,26 @@
           <div class="panel-heading">
             <div>
               <p class="panel-kicker">Workspace overview</p>
-              <h2>Track work, leave, meetings, and daily execution with cleaner navigation.</h2>
+              <h2>Manage daily operations, team updates, schedules, and meeting follow-up from one workspace.</h2>
             </div>
           </div>
           <div class="hero-banner">
-            <div>
-              <strong>Direct input is live</strong>
-              <p class="muted">You can now add users, projects, tasks, schedules, and leave records from the dashboard itself.</p>
+            <div class="hero-summary">
+              <p class="hero-label">Project watch</p>
+              <strong>Recent projects and delivery ownership</strong>
+              <p class="muted">Keep a quick view of the latest project entries, who is working on them, and their current status without leaving the dashboard.</p>
             </div>
-            <div class="hero-badges">
-              <span>Shared online API</span>
-              <span>Editable schedule board</span>
-              <span>Demo login flow</span>
-            </div>
+            <div class="hero-projects" id="heroProjectList"></div>
           </div>
         </section>
 
         <section class="panel wide-panel view-panel" data-section="dashboard">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">Work tree elements</p>
-              <h2>Tracking overview</h2>
+              <p class="panel-kicker">Operational snapshot</p>
+              <h2>Workspace signals</h2>
             </div>
-            <p class="muted">Progress, adherence, meetings, and leave visibility for the selected range.</p>
+            <p class="muted">Live counts for users, projects, tasks, meetings, schedules, and leave coverage.</p>
           </div>
           <div class="metric-grid" id="metricGrid"></div>
         </section>
@@ -124,18 +121,12 @@
         <section class="panel status-panel view-panel" data-section="dashboard">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">OKR Hub</p>
-              <h2>Project health</h2>
+              <p class="panel-kicker">Latest projects</p>
+              <h2>Project status</h2>
             </div>
+            <p class="muted">Most recent project entries and their current progress state.</p>
           </div>
-          <div class="health-badges" id="healthBadges"></div>
-          <div class="risk-card">
-            <div>
-              <p class="panel-kicker">Priority signal</p>
-              <h3 id="riskHeadline">1 plan needs attention</h3>
-            </div>
-            <p id="riskText">Budget review for Civic Portal rollout is due tomorrow.</p>
-          </div>
+          <div class="record-list compact-list" id="projectStatusList"></div>
         </section>
 
         <section class="panel wide-panel view-panel" data-section="dashboard">
@@ -197,6 +188,17 @@
 
           <div class="schedule-board" id="scheduleBoard"></div>
           <div class="record-list compact-list" id="scheduleList"></div>
+        </section>
+
+        <section class="panel hero-panel org-panel view-panel" data-section="organization">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Organization component</p>
+              <h2>Organization structure</h2>
+            </div>
+            <p class="muted">Shows who works under whom across the current organization tree.</p>
+          </div>
+          <div class="org-tree" id="organizationTree"></div>
         </section>
 
         <section class="panel holidays-panel view-panel" data-section="dashboard leave">

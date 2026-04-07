@@ -69,6 +69,46 @@ const defaultBoardItems = {
   monthly: { "Week 1": [{ title: "Project kickoff", note: "3 new mandates", color: "#2563eb" }], "Week 3": [{ title: "Executive review", note: "Progress narrative", color: "#173f9a" }], "Week 7": [{ title: "Public holiday", note: "National event", color: "#e6a817" }] }
 };
 
+const defaultHeroProjects = [
+  { name: "District Attendance Portal", owner: "Planning Cell", status: "Pending review" },
+  { name: "Leave Approval Workflow", owner: "HR Operations", status: "In progress" },
+  { name: "Meeting Notes Archive", owner: "Admin Support", status: "Ready for update" }
+];
+
+const defaultOrganizationChart = {
+  name: "Mr. Rupanjay",
+  designation: "Director",
+  children: [
+    {
+      name: "Mr. Basu",
+      designation: "Manager",
+      children: [
+        { name: "Mr. Shivam", designation: "Employee" }
+      ]
+    },
+    {
+      name: "Mr. Kismat",
+      designation: "Manager",
+      children: [
+        { name: "Mr. Pranav", designation: "Employee" },
+        { name: "Mr. Ravi", designation: "Employee" },
+        { name: "Mr. Rishkesh", designation: "Employee" },
+        { name: "Mr. Samast", designation: "Employee" },
+        { name: "Mr. Harshita", designation: "Employee" }
+      ]
+    },
+    {
+      name: "Mr. Vinod",
+      designation: "Manager",
+      children: [
+        { name: "Mr. Vishal", designation: "Employee" },
+        { name: "Mr. Divesh", designation: "Employee" },
+        { name: "Mr. Anivesh", designation: "Employee" }
+      ]
+    }
+  ]
+};
+
 const state = {
   currentRange: "weekly",
   currentView: "dashboard",
@@ -144,7 +184,7 @@ const viewPanels = [...document.querySelectorAll(".view-panel")];
 const navLinks = [...document.querySelectorAll(".nav-link")];
 const welcomeTitle = document.getElementById("welcomeTitle");
 const metricGrid = document.getElementById("metricGrid");
-const healthBadges = document.getElementById("healthBadges");
+const projectStatusList = document.getElementById("projectStatusList");
 const capacityFill = document.getElementById("capacityFill");
 const capacityPercent = document.getElementById("capacityPercent");
 const capacityCaption = document.getElementById("capacityCaption");
@@ -152,8 +192,6 @@ const scheduleBoard = document.getElementById("scheduleBoard");
 const scheduleList = document.getElementById("scheduleList");
 const holidayGrid = document.getElementById("holidayGrid");
 const barChart = document.getElementById("barChart");
-const riskHeadline = document.getElementById("riskHeadline");
-const riskText = document.getElementById("riskText");
 const upcomingTaskTitle = document.getElementById("upcomingTaskTitle");
 const upcomingTaskMeta = document.getElementById("upcomingTaskMeta");
 const upcomingMeetingTitle = document.getElementById("upcomingMeetingTitle");
@@ -164,6 +202,8 @@ const currentUserLabel = document.getElementById("currentUserLabel");
 const logoutBtn = document.getElementById("logoutBtn");
 const modeButtons = [...document.querySelectorAll(".mode-pill")];
 const scopeButtons = [...document.querySelectorAll(".scope-chip")];
+const heroProjectList = document.getElementById("heroProjectList");
+const organizationTree = document.getElementById("organizationTree");
 const workspaceTabs = document.getElementById("workspaceTabs");
 const workspaceTabList = document.getElementById("workspaceTabList");
 const workspaceAddBtn = document.getElementById("workspaceAddBtn");
@@ -429,20 +469,19 @@ function setActiveView(view) {
   renderWorkspaceTabs();
 }
 
-function renderHealth() {
-  const counts = { offtrack: 0, risk: 0, healthy: 0, done: 0 };
-  state.projects.forEach((project) => {
-    if (project.status === "Off track") counts.offtrack += 1;
-    else if (project.status === "At risk") counts.risk += 1;
-    else if (project.status === "Completed") counts.done += 1;
-    else counts.healthy += 1;
-  });
-  healthBadges.innerHTML = [
-    { label: `${counts.offtrack} off track`, className: "offtrack" },
-    { label: `${counts.risk} at risk`, className: "risk" },
-    { label: `${counts.healthy} on track`, className: "healthy" },
-    { label: `${counts.done} completed`, className: "done" }
-  ].map((item) => `<span class="health-chip ${item.className}">${item.label}</span>`).join("");
+function renderProjectStatus() {
+  const latestProjects = state.projects.slice(0, 3);
+  projectStatusList.innerHTML = latestProjects.length
+    ? latestProjects.map((project) => `
+      <article class="record-card">
+        <div>
+          <h3>${escapeHtml(project.name)}</h3>
+          <p>Current status for the latest project record.</p>
+        </div>
+        <span class="record-tag ${statusClass(project.status)}">${escapeHtml(project.status)}</span>
+      </article>
+    `).join("")
+    : `<article class="record-card"><div><h3>No projects yet</h3><p>Add project entries to show the latest status here.</p></div><span class="record-tag">Waiting</span></article>`;
 }
 
 function renderBarChart(items) {
@@ -465,15 +504,141 @@ function renderBarChart(items) {
   barChart.innerHTML = `<defs><linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#2563eb" /><stop offset="100%" stop-color="#0f8b8d" /></linearGradient></defs>${gridLines}<line x1="${leftPad - 12}" y1="${bottom}" x2="430" y2="${bottom}" stroke="rgba(21,35,59,0.16)" />${bars}`;
 }
 
+function renderMetricGrid(metrics) {
+  metricGrid.innerHTML = metrics.map((metric) => `
+    <article class="metric-card">
+      <h3>${escapeHtml(metric.label)}</h3>
+      <div class="metric-value">${escapeHtml(metric.value)}</div>
+      <div class="metric-meta">${escapeHtml(metric.meta)}</div>
+    </article>
+  `).join("");
+}
+
+function renderHeroProjects() {
+  const usersById = Object.fromEntries(state.users.map((user) => [user.id, user]));
+  const latestProjects = state.projects.slice(0, 3).map((project) => ({
+    name: project.name,
+    owner: usersById[project.ownerId]?.name || "Team not assigned",
+    status: project.status
+  }));
+  const visibleProjects = [...latestProjects];
+
+  while (visibleProjects.length < 3) {
+    visibleProjects.push(defaultHeroProjects[visibleProjects.length]);
+  }
+
+  heroProjectList.innerHTML = visibleProjects.map((project, index) => {
+      return `
+        <article class="hero-project-card">
+          <p class="hero-label">Project ${String(index + 1).padStart(2, "0")}</p>
+          <strong>${escapeHtml(project.name)}</strong>
+          <p class="hero-project-meta">Who are working: ${escapeHtml(project.owner)}</p>
+          <div class="hero-project-status">
+            <span class="record-tag ${statusClass(project.status)}">${escapeHtml(project.status)}</span>
+          </div>
+        </article>
+      `;
+    }).join("");
+}
+
+function renderOrganization() {
+  const renderNode = (node) => `
+    <li class="org-node-item">
+      <div class="org-node">
+        <div class="org-node-name">${escapeHtml(node.name)}</div>
+        <div class="org-node-designation">${escapeHtml(node.designation || "Employee")}</div>
+      </div>
+      ${node.children?.length ? `
+        <ul class="org-node-children">
+          ${node.children.map((child) => renderNode(child)).join("")}
+        </ul>
+      ` : ""}
+    </li>
+  `;
+
+  organizationTree.innerHTML = `
+    <div class="org-chart-wrap">
+      <ul class="org-chart-root">
+        ${renderNode(defaultOrganizationChart)}
+      </ul>
+    </div>
+  `;
+}
+
+function buildOperationalMetrics() {
+  const activeProjects = state.projects.filter((project) => !/completed/i.test(String(project.status || ""))).length;
+  const pendingTasks = state.todos.filter((todo) => !todo.done).length;
+  const scheduleCount = state.schedules.filter((item) => item.range === state.currentRange).length;
+  const leaveTracked = state.holidays.reduce((sum, holiday) => sum + Number(holiday.total || 0), 0);
+  const nextMeeting = state.meetings[0];
+
+  return [
+    {
+      label: "Users",
+      value: String(state.users.length),
+      meta: state.users.length ? "Profiles available for planning and ownership." : "No user records added yet."
+    },
+    {
+      label: "Active projects",
+      value: String(activeProjects),
+      meta: `${state.projects.length} total project records in the workspace.`
+    },
+    {
+      label: "Open tasks",
+      value: String(pendingTasks),
+      meta: pendingTasks ? "Pending items still need closure or reassignment." : "No open tasks at the moment."
+    },
+    {
+      label: "Meetings",
+      value: String(state.meetings.length),
+      meta: nextMeeting ? `Next item: ${String(nextMeeting.title || "Meeting scheduled")}.` : "No meetings logged yet."
+    },
+    {
+      label: `${state.currentRange[0].toUpperCase()}${state.currentRange.slice(1)} schedules`,
+      value: String(scheduleCount),
+      meta: leaveTracked ? `${leaveTracked} leave slots tracked across configured holiday types.` : "Add schedule or leave data to populate this range."
+    }
+  ];
+}
+
+function buildMetricFallback(errorMessage) {
+  return [
+    {
+      label: "Database status",
+      value: "Offline",
+      meta: "Dashboard data could not be loaded from the backend."
+    },
+    {
+      label: "Likely issue",
+      value: "Auth",
+      meta: "SQL login or database permissions still need to be corrected."
+    },
+    {
+      label: "What to check",
+      value: "SQL",
+      meta: "Confirm mixed mode, mapped user roles, and the ScheduleTracker database connection."
+    },
+    {
+      label: "App state",
+      value: "Retry",
+      meta: "Restart the app after fixing the database settings."
+    },
+    {
+      label: "Last error",
+      value: "Info",
+      meta: errorMessage || "Backend connection failed."
+    }
+  ];
+}
+
 function renderDashboard() {
   const data = dashboardData[state.currentRange];
-  metricGrid.innerHTML = data.metrics.map((metric) => `<article class="metric-card"><h3>${escapeHtml(metric.label)}</h3><div class="gauge" style="--value:${metric.value}; --accent:${metric.color}" data-value="${metric.value}"></div><div class="metric-meta">${escapeHtml(metric.meta)}</div></article>`).join("");
-  riskHeadline.textContent = data.risk.headline;
-  riskText.textContent = data.risk.text;
+  renderHeroProjects();
+  renderMetricGrid(buildOperationalMetrics());
   capacityPercent.textContent = `${data.capacity.percent}%`;
   capacityCaption.textContent = data.capacity.caption;
   capacityFill.style.width = `${data.capacity.percent}%`;
-  renderHealth();
+  renderProjectStatus();
   renderScheduleBoard();
   renderBarChart(data.chart);
 }
@@ -507,7 +672,8 @@ function renderProjects() {
   const usersById = Object.fromEntries(state.users.map((user) => [user.id, user]));
   financeProjectInput.innerHTML = state.projects.map((project) => `<option value="${project.id}">${escapeHtml(project.name)}</option>`).join("");
   projectList.innerHTML = state.projects.map((project) => `<article class="record-card"><div><h3>${escapeHtml(project.name)}</h3><p>Owner: ${escapeHtml(usersById[project.ownerId]?.name || "Unassigned")}</p></div><span class="record-tag ${statusClass(project.status)}">${escapeHtml(project.status)}</span></article>`).join("");
-  renderHealth();
+  renderHeroProjects();
+  renderProjectStatus();
 }
 
 function renderFinances() {
@@ -873,6 +1039,7 @@ async function init() {
   state.schedules = data.schedules || [];
   state.finances = data.finances || [];
   state.selectedMeetingId = state.meetings[0]?.id || null;
+  renderOrganization();
   renderDashboard();
   renderHolidays();
   renderUsers();
@@ -887,6 +1054,8 @@ async function init() {
 }
 
 init().catch((error) => {
+  renderOrganization();
+  renderMetricGrid(buildMetricFallback(error.message));
   upcomingTaskTitle.textContent = "Unable to load workspace";
   upcomingTaskMeta.textContent = error.message;
   upcomingMeetingTitle.textContent = "Unable to load meetings";
