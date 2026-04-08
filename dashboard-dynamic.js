@@ -272,9 +272,31 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function getSessionUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
 async function apiRequest(path, options = {}) {
+  const authUser = getSessionUser();
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  if (authUser?.username) {
+    headers["X-Auth-Username"] = authUser.username;
+  }
+  if (authUser?.employeeCode) {
+    headers["X-Auth-Employee-Code"] = authUser.employeeCode;
+  }
+
   const response = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      ...headers,
+      ...(options.headers || {})
+    },
     ...options
   });
   if (!response.ok) {
@@ -413,11 +435,11 @@ function ensureWorkspaceState(view) {
   }
 
   const openTabs = state.openWorkspaceTabs[view];
-  if (!openTabs.length) {
-    openTabs.push(definition.base.id);
+  if (!openTabs.includes(definition.base.id)) {
+    openTabs.unshift(definition.base.id);
   }
 
-  if (!state.currentWorkspaceTabId || !openTabs.includes(state.currentWorkspaceTabId)) {
+  if (!openTabs.includes(state.currentWorkspaceTabId)) {
     state.currentWorkspaceTabId = definition.base.id;
   }
 }
@@ -451,11 +473,18 @@ function renderWorkspaceTabs() {
   ensureWorkspaceState(state.currentView);
   const openTabs = state.openWorkspaceTabs[state.currentView];
   workspaceTabs.classList.remove("hidden");
+  workspaceMenu.classList.add("hidden");
+  workspaceAddBtn.setAttribute("aria-expanded", "false");
   workspaceTabList.innerHTML = openTabs.map((tabId) => {
     const option = definition.options.find((item) => item.id === tabId);
     const isBase = tabId === definition.base.id;
-    const label = isBase ? definition.base.label : option.label;
-    return `<button class="workspace-tab ${state.currentWorkspaceTabId === tabId ? "active" : ""}" type="button" data-workspace-tab="${tabId}">${escapeHtml(label)}${isBase ? "" : `<span class="workspace-tab-close" data-close-workspace-tab="${tabId}">x</span>`}</button>`;
+    if (isBase) {
+      return `<button class="workspace-tab ${state.currentWorkspaceTabId === tabId ? "active" : ""}" type="button" data-workspace-tab="${tabId}">${escapeHtml(definition.base.label)}</button>`;
+    }
+    if (!option) {
+      return "";
+    }
+    return `<button class="workspace-tab ${state.currentWorkspaceTabId === tabId ? "active" : ""}" type="button" data-workspace-tab="${tabId}">${escapeHtml(option.label)}<span class="workspace-tab-close" data-close-workspace-tab="${tabId}" aria-label="Close ${escapeHtml(option.label)} tab">x</span></button>`;
   }).join("");
 
   const remainingOptions = definition.options.filter((option) => !openTabs.includes(option.id));
@@ -467,8 +496,13 @@ function renderWorkspaceTabs() {
     workspacePlaceholder.classList.add("hidden");
   } else {
     const activeOption = definition.options.find((item) => item.id === state.currentWorkspaceTabId);
+    if (!activeOption) {
+      workspacePlaceholder.classList.add("hidden");
+      syncViewPanels();
+      return;
+    }
     workspacePlaceholder.classList.remove("hidden");
-    workspacePlaceholderKicker.textContent = `${definition.base.label} tab`;
+    workspacePlaceholderKicker.textContent = `${definition.base.label} workspace`;
     workspacePlaceholderTitle.textContent = activeOption.title;
     workspacePlaceholderText.textContent = activeOption.text;
   }
@@ -555,6 +589,24 @@ function renderHeroProjects() {
 }
 
 function renderOrganization() {
+  const usersByManager = new Map();
+  state.users.forEach((user) => {
+    const key = user.managerId == null ? "root" : String(user.managerId);
+    if (!usersByManager.has(key)) {
+      usersByManager.set(key, []);
+    }
+    usersByManager.get(key).push(user);
+  });
+
+  const buildNode = (user) => ({
+    name: user.name,
+    designation: user.role || "Employee",
+    children: (usersByManager.get(String(user.id)) || []).map(buildNode)
+  });
+
+  const rootUsers = usersByManager.get("root") || state.users.filter((user) => user.managerId == null);
+  const organizationRoots = rootUsers.length ? rootUsers.map(buildNode) : [defaultOrganizationChart];
+
   const renderNode = (node) => `
     <li class="org-node-item">
       <div class="org-node">
@@ -572,7 +624,7 @@ function renderOrganization() {
   organizationTree.innerHTML = `
     <div class="org-chart-wrap">
       <ul class="org-chart-root">
-        ${renderNode(defaultOrganizationChart)}
+        ${organizationRoots.map((node) => renderNode(node)).join("")}
       </ul>
     </div>
   `;
@@ -859,8 +911,8 @@ function renderMeetings() {
 }
 
 function renderSidebar() {
-  currentUserLabel.textContent = state.authUser?.username || "admin";
-  welcomeTitle.textContent = `Welcome, ${state.authUser?.username || "admin"}`;
+  currentUserLabel.textContent = state.authUser?.name || state.authUser?.username || "admin";
+  welcomeTitle.textContent = `Welcome, ${state.authUser?.name || state.authUser?.username || "admin"}`;
 
   const importantTask = state.todos.find((todo) => !todo.done) || state.todos[0] || null;
   upcomingTaskTitle.textContent = importantTask ? importantTask.text : "No important task right now";

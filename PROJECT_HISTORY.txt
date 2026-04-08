@@ -23,10 +23,15 @@ How To Run
 4. Login:
    username: admin
    password: admin
+5. Login note:
+   `admin / admin` is currently only a development/demo login.
+   In local JSON mode it does not come from `db.json.users`.
 
 Current Data Setup
 ------------------
 - For now the app uses db.json as the internal database.
+- In JSON mode, `db.json.users` is app data and not the active password source for login.
+- `admin / admin` currently works because the local JSON store has a demo login fallback in code.
 - SQL Server support has now been added for local SSMS / SQLEXPRESS use.
 - If SQL env vars are not set, the app still falls back to `db.json`.
 - `server.js` now supports loading a local `.env` file automatically.
@@ -39,16 +44,21 @@ Current Data Setup
   - the app now reaches SQL Server successfully with `scheduleapp`
   - the first `/api/bootstrap` call fails with: `CREATE TABLE permission denied in database 'ScheduleTracker'`
   - `scheduleapp` needs `db_ddladmin`, or `dbo.schedules` must be created manually by an admin user
+- SQL login behavior:
+  - JSON mode uses a development/demo login path
+  - SQL Server mode is intended to use application users stored in `dbo.users`
+  - `admin / admin` should be treated as a dev fallback, not as the real database user account
 
 Current Product State
 ---------------------
 - Login page works.
+- SQL-backed login now works against `dbo.users` using the current `Emp...` column naming.
 - Left side of login page now shows the NIELIT image instead of the old text-only welcome block.
 - Dashboard layout is active.
 - Dashboard top area stays in its original compact layout.
 - Dashboard hero area now shows recent project cards with ownership and status.
 - Dashboard metrics now show live workspace counts instead of the old gauge widgets.
-- A separate Organization view now renders the current reporting structure.
+- A separate Organization view now renders the current reporting structure from `dbo.users`.
 - The old Leave section is now labeled `Calender`.
 - The `Calender` workspace now has 6 components:
   - `Calender`
@@ -68,6 +78,35 @@ Current Product State
 - Sidebar stays visually consistent on larger screens.
 - Scope chips at top right behave like selected widgets.
 
+Current SQL App Mapping
+-----------------------
+- `Schedules` component -> `dbo.employeeSchedule`
+- `Projects` component -> `dbo.employeeProject`
+- `Calender` component -> `dbo.employeeCalendar`
+- `Meetings` component -> `dbo.employeeMeeting`
+- `Organization` component -> `dbo.users`
+
+Current SQL Application Flow
+----------------------------
+- `Login Page -> dbo.users -> session identity -> API calls -> feature tables -> dashboard UI`
+- Login checks:
+  - `EmpUsername`
+  - `EmpPassword`
+  - `EmpID`
+  - `EmpFullName`
+  - `EmpDesignation`
+- After login, the app should use the logged-in employee identity for all feature fetch/save calls.
+- Current intended module flow:
+  - `Schedules` reads and writes `dbo.employeeSchedule`
+  - `Projects` reads and writes `dbo.employeeProject`
+  - `Calender` reads and writes `dbo.employeeCalendar`
+  - `Meetings` reads and writes `dbo.employeeMeeting`
+  - `Organization` reads `dbo.users` and builds the tree from `EmpReportingManagerID -> EmpID`
+- Recommended future access scope:
+  - employee -> own data
+  - manager -> own data plus junior data
+  - owner/admin -> all data
+
 Recent Completed Work
 ---------------------
 - Prepared project for Firebase Hosting + Cloud Run + PostgreSQL later.
@@ -84,6 +123,9 @@ Recent Completed Work
 - Added image sync support so `images/` is copied into `public/` during startup.
 - Rebuilt the leave workspace into a 6-panel `Calender` layout with the requested 2/3 + 1/3 then half-width rows.
 - Verified that SQL startup succeeds but `/api/bootstrap` still fails because `scheduleapp` lacks table creation permission.
+- Switched the active SQL login path to the current `dbo.users` schema with `EmpUsername` / `EmpPassword`.
+- Verified `owner1 / owner123` works against the app API in SQL mode.
+- Connected current SQL bootstrap loading to the new employee-based schema for users, projects, schedules, and organization hierarchy.
 
 Latest Git Status Reference
 ---------------------------
@@ -123,6 +165,32 @@ Git commit:
 - working tree only (not committed yet)
 Next step:
 - Commit and push the documentation update if needed.
+
+Date: 2026-04-08
+What changed:
+- Clarified in README that `admin / admin` is a development/demo login in local JSON mode.
+- Clarified that JSON mode does not authenticate from `db.json.users`.
+- Added matching notes in PROJECT_HISTORY so future work keeps demo login and database-backed login separate.
+Files touched:
+- README.md
+- PROJECT_HISTORY.txt
+Git commit:
+- working tree only (not committed yet)
+Next step:
+- Decide whether to keep the demo fallback or move credentials fully into `.env` / database-backed auth.
+
+Date: 2026-04-08
+What changed:
+- Documented the new SQL application flow and the feature-to-table mapping.
+- Recorded that login now works against `dbo.users` with the current `Emp...` schema.
+- Recorded the intended table mapping for schedules, projects, calender, meetings, and organization.
+Files touched:
+- README.md
+- PROJECT_HISTORY.txt
+Git commit:
+- working tree only (not committed yet)
+Next step:
+- Continue connecting the remaining modules so each component reads from and writes to its mapped SQL table.
 
 Update Log Template
 -------------------

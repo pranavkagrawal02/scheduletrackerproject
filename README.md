@@ -37,6 +37,12 @@ Default login:
 - Username: `admin`
 - Password: `admin`
 
+Important:
+
+- `admin / admin` is a development/demo login in local mode
+- in JSON mode, the app does not authenticate against the `users` list inside [db.json](/d:/PranavData/scheduleTrackerProject/db.json)
+- local JSON login currently allows the configured demo admin account and other demo-style same-value logins handled in [src/store/json-store.js](/d:/PranavData/scheduleTrackerProject/src/store/json-store.js)
+
 If port `3000` is free on your machine, you can also use:
 
 ```powershell
@@ -62,6 +68,12 @@ When you run `npm start`:
 The store selection lives in [src/store/index.js](/d:/PranavData/scheduleTrackerProject/src/store/index.js).
 
 You can also create a local `.env` file from [.env.example](/d:/PranavData/scheduleTrackerProject/.env.example). `server.js` now loads `.env` automatically before creating the data store.
+
+Authentication behavior:
+
+- when SQL env vars are not set, the app uses the JSON store and a development/demo login flow
+- in that JSON mode, `admin / admin` comes from code configuration, not from a user record in [db.json](/d:/PranavData/scheduleTrackerProject/db.json)
+- when `SQL_SERVER` and `SQL_DATABASE` are set, the app switches to SQL Server-backed login checks against `dbo.users`
 
 ## Project structure
 
@@ -149,15 +161,61 @@ Important:
 - `scheduleapp / Schedule@123` is the SQL Server database login used by Node.js
 - `owner1 / owner123` is an application user stored in `dbo.users`
 - after starting the app with the SQL env vars, log into the website with `owner1 / owner123`
+- `admin / admin` is still a development/demo fallback in code and should not be treated as the real SQL application user
 - if SSMS connects with `Windows Authentication`, that does not automatically mean Node.js can use the same connection mode in this project
 - the current verified SQL error on this machine is `CREATE TABLE permission denied in database 'ScheduleTracker'`, so `scheduleapp` can connect but still needs DDL permission or a pre-created `dbo.schedules` table
 
 ## Notes
 
 - if SQL env vars are not set, the app uses `db.json`
+- in JSON mode, authentication is demo-oriented and does not read passwords from `db.json.users`
 - if `SQL_SERVER` and `SQL_DATABASE` are set, the app uses SQL Server
 - the SQL store expects your SSMS database tables to exist
 - the dashboard now shows recent project cards, live workspace counts, a separate organization tab, and a 6-panel `Calender` workspace
+
+## SQL App Flow
+
+Current database-to-application logic:
+
+- `Login Page -> dbo.users -> session identity -> API calls -> feature tables -> dashboard UI`
+- the app first validates the user from `dbo.users`
+- after login, the app uses the logged-in employee identity to fetch and save feature data
+
+Current component mapping:
+
+- `Schedules` component -> `dbo.employeeSchedule`
+- `Projects` component -> `dbo.employeeProject`
+- `Calender` component -> `dbo.employeeCalendar`
+- `Meetings` component -> `dbo.employeeMeeting`
+- `Organization` component -> `dbo.users`
+
+Current module flow:
+
+- `Login`
+  - checks `EmpUsername` and `EmpPassword` in `dbo.users`
+  - reads `EmpID`, `EmpFullName`, and `EmpDesignation`
+  - stores the logged-in employee identity in session
+- `Schedules`
+  - fetches rows from `dbo.employeeSchedule` for the logged-in `EmpID`
+  - add, edit, and delete actions write back to `dbo.employeeSchedule`
+- `Projects`
+  - fetches rows from `dbo.employeeProject` for the logged-in `EmpID`
+  - add, edit, and delete actions write back to `dbo.employeeProject`
+- `Calender`
+  - fetches rows from `dbo.employeeCalendar` for the logged-in `EmpID`
+  - add, edit, and delete actions write back to `dbo.employeeCalendar`
+- `Meetings`
+  - fetches rows from `dbo.employeeMeeting` for the logged-in `EmpID`
+  - add, edit, and delete actions write back to `dbo.employeeMeeting`
+- `Organization`
+  - reads from `dbo.users`
+  - uses `EmpReportingManagerID -> EmpID` to build the reporting tree
+
+Recommended visibility logic for later:
+
+- employee -> own records only
+- manager -> own records plus junior records
+- owner/admin -> all records
 
 ## Node version
 

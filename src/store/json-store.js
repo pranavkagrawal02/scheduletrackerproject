@@ -1,5 +1,4 @@
 const fs = require("fs/promises");
-const path = require("path");
 
 function nextId(items) {
   return items.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
@@ -7,6 +6,56 @@ function nextId(items) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeUsername(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getActorUsername(actor) {
+  return normalizeUsername(actor?.username) || "admin";
+}
+
+function assignLegacyOwnership(db) {
+  let changed = false;
+
+  for (const project of db.projects || []) {
+    if (!project.createdByUsername) {
+      project.createdByUsername = "admin";
+      changed = true;
+    }
+  }
+
+  const projectOwners = new Map((db.projects || []).map((project) => [Number(project.id), project.createdByUsername || "admin"]));
+  for (const finance of db.finances || []) {
+    if (!finance.createdByUsername) {
+      finance.createdByUsername = projectOwners.get(Number(finance.projectId)) || "admin";
+      changed = true;
+    }
+  }
+
+  for (const key of ["holidays", "todos", "meetings", "schedules"]) {
+    for (const item of db[key] || []) {
+      if (!item.ownerUsername) {
+        item.ownerUsername = "admin";
+        changed = true;
+      }
+    }
+  }
+
+  return changed;
+}
+
+function filterByOwner(items, ownerKey, username) {
+  return (items || []).filter((item) => normalizeUsername(item[ownerKey]) === username);
+}
+
+function withoutFields(item, fields) {
+  const copy = { ...item };
+  for (const field of fields) {
+    delete copy[field];
+  }
+  return copy;
 }
 
 function createJsonStore({ dbPath }) {
@@ -19,10 +68,29 @@ function createJsonStore({ dbPath }) {
     await fs.writeFile(dbPath, JSON.stringify(data, null, 2));
   }
 
+  async function readPreparedDb() {
+    const db = await readDb();
+    if (assignLegacyOwnership(db)) {
+      await writeDb(db);
+    }
+    return db;
+  }
+
   return {
     provider: "json",
-    async getBootstrap() {
-      return readDb();
+    async getBootstrap(actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+
+      return {
+        users: clone(db.users || []),
+        projects: filterByOwner(db.projects, "createdByUsername", actorUsername).map((item) => withoutFields(item, ["createdByUsername"])),
+        holidays: filterByOwner(db.holidays, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
+        todos: filterByOwner(db.todos, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
+        meetings: filterByOwner(db.meetings, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
+        schedules: filterByOwner(db.schedules, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
+        finances: filterByOwner(db.finances, "createdByUsername", actorUsername).map((item) => withoutFields(item, ["createdByUsername"]))
+      };
     },
     async validateLogin(username, password) {
       const adminUser = process.env.DEMO_ADMIN_USERNAME || "admin";
@@ -38,7 +106,7 @@ function createJsonStore({ dbPath }) {
       };
     },
     async createUser(payload) {
-      const db = await readDb();
+      const db = await readPreparedDb();
       const user = {
         id: nextId(db.users),
         name: payload.name,
@@ -49,37 +117,53 @@ function createJsonStore({ dbPath }) {
       await writeDb(db);
       return user;
     },
-    async createProject(payload) {
-      const db = await readDb();
+    async createProject(payload, actor) {
+      const db = await readPreparedDb();
       const project = {
         id: nextId(db.projects),
         name: payload.name,
         ownerId: payload.ownerId,
-        status: payload.status
+        status: payload.status,
+        createdByUsername: getActorUsername(actor)
       };
       db.projects.unshift(project);
       await writeDb(db);
-      return project;
+      return withoutFields(project, ["createdByUsername"]);
     },
-    async createFinance(payload) {
-      const db = await readDb();
+    async createFinance(payload, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const project = db.projects.find((item) => item.id === payload.projectId && normalizeUsername(item.createdByUsername) === actorUsername);
+      if (!project) {
+        throw new Error("Choose one of your own projects before saving finance data.");
+      }
+
       const finance = {
         id: nextId(db.finances),
         projectId: payload.projectId,
         type: payload.type,
         amount: payload.amount,
         status: payload.status,
-        note: payload.note
+        note: payload.note,
+        createdByUsername: actorUsername
       };
       db.finances.unshift(finance);
       await writeDb(db);
-      return finance;
+      return withoutFields(finance, ["createdByUsername"]);
     },
-    async updateFinance(id, payload) {
-      const db = await readDb();
-      const finance = db.finances.find((item) => item.id === id);
+    async updateFinance(id, payload, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const finance = db.finances.find((item) => item.id === id && normalizeUsername(item.createdByUsername) === actorUsername);
       if (!finance) {
         return null;
+      }
+
+      if (payload.projectId !== undefined) {
+        const project = db.projects.find((item) => item.id === payload.projectId && normalizeUsername(item.createdByUsername) === actorUsername);
+        if (!project) {
+          throw new Error("You can only attach finance records to your own projects.");
+        }
       }
 
       finance.projectId = payload.projectId ?? finance.projectId;
@@ -88,11 +172,12 @@ function createJsonStore({ dbPath }) {
       finance.status = payload.status ?? finance.status;
       finance.note = payload.note ?? finance.note;
       await writeDb(db);
-      return finance;
+      return withoutFields(finance, ["createdByUsername"]);
     },
-    async deleteFinance(id) {
-      const db = await readDb();
-      const index = db.finances.findIndex((item) => item.id === id);
+    async deleteFinance(id, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const index = db.finances.findIndex((item) => item.id === id && normalizeUsername(item.createdByUsername) === actorUsername);
       if (index === -1) {
         return false;
       }
@@ -101,21 +186,23 @@ function createJsonStore({ dbPath }) {
       await writeDb(db);
       return true;
     },
-    async createHoliday(payload) {
-      const db = await readDb();
+    async createHoliday(payload, actor) {
+      const db = await readPreparedDb();
       const holiday = {
         id: nextId(db.holidays),
         name: payload.name,
         used: payload.used,
-        total: payload.total
+        total: payload.total,
+        ownerUsername: getActorUsername(actor)
       };
       db.holidays.unshift(holiday);
       await writeDb(db);
-      return holiday;
+      return withoutFields(holiday, ["ownerUsername"]);
     },
-    async updateHoliday(id, payload) {
-      const db = await readDb();
-      const holiday = db.holidays.find((item) => item.id === id);
+    async updateHoliday(id, payload, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const holiday = db.holidays.find((item) => item.id === id && normalizeUsername(item.ownerUsername) === actorUsername);
       if (!holiday) {
         return null;
       }
@@ -124,25 +211,27 @@ function createJsonStore({ dbPath }) {
       holiday.used = payload.used ?? holiday.used;
       holiday.total = payload.total ?? holiday.total;
       await writeDb(db);
-      return holiday;
+      return withoutFields(holiday, ["ownerUsername"]);
     },
-    async createSchedule(payload) {
-      const db = await readDb();
+    async createSchedule(payload, actor) {
+      const db = await readPreparedDb();
       const schedule = {
         id: nextId(db.schedules),
         range: payload.range,
         day: payload.day,
         title: payload.title,
         note: payload.note,
-        color: payload.color
+        color: payload.color,
+        ownerUsername: getActorUsername(actor)
       };
       db.schedules.unshift(schedule);
       await writeDb(db);
-      return schedule;
+      return withoutFields(schedule, ["ownerUsername"]);
     },
-    async updateSchedule(id, payload) {
-      const db = await readDb();
-      const schedule = db.schedules.find((item) => item.id === id);
+    async updateSchedule(id, payload, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const schedule = db.schedules.find((item) => item.id === id && normalizeUsername(item.ownerUsername) === actorUsername);
       if (!schedule) {
         return null;
       }
@@ -153,11 +242,12 @@ function createJsonStore({ dbPath }) {
       schedule.note = payload.note ?? schedule.note;
       schedule.color = payload.color ?? schedule.color;
       await writeDb(db);
-      return schedule;
+      return withoutFields(schedule, ["ownerUsername"]);
     },
-    async deleteSchedule(id) {
-      const db = await readDb();
-      const index = db.schedules.findIndex((item) => item.id === id);
+    async deleteSchedule(id, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const index = db.schedules.findIndex((item) => item.id === id && normalizeUsername(item.ownerUsername) === actorUsername);
       if (index === -1) {
         return false;
       }
@@ -166,31 +256,34 @@ function createJsonStore({ dbPath }) {
       await writeDb(db);
       return true;
     },
-    async createTodo(payload) {
-      const db = await readDb();
+    async createTodo(payload, actor) {
+      const db = await readPreparedDb();
       const todo = {
         id: nextId(db.todos),
         text: payload.text,
-        done: false
+        done: false,
+        ownerUsername: getActorUsername(actor)
       };
       db.todos.unshift(todo);
       await writeDb(db);
-      return todo;
+      return withoutFields(todo, ["ownerUsername"]);
     },
-    async updateTodo(id, payload) {
-      const db = await readDb();
-      const todo = db.todos.find((item) => item.id === id);
+    async updateTodo(id, payload, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const todo = db.todos.find((item) => item.id === id && normalizeUsername(item.ownerUsername) === actorUsername);
       if (!todo) {
         return null;
       }
 
       todo.done = payload.done ?? todo.done;
       await writeDb(db);
-      return todo;
+      return withoutFields(todo, ["ownerUsername"]);
     },
-    async deleteTodo(id) {
-      const db = await readDb();
-      const index = db.todos.findIndex((item) => item.id === id);
+    async deleteTodo(id, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const index = db.todos.findIndex((item) => item.id === id && normalizeUsername(item.ownerUsername) === actorUsername);
       if (index === -1) {
         return false;
       }
@@ -199,19 +292,20 @@ function createJsonStore({ dbPath }) {
       await writeDb(db);
       return true;
     },
-    async updateMeeting(id, payload) {
-      const db = await readDb();
-      const meeting = db.meetings.find((item) => item.id === id);
+    async updateMeeting(id, payload, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const meeting = db.meetings.find((item) => item.id === id && normalizeUsername(item.ownerUsername) === actorUsername);
       if (!meeting) {
         return null;
       }
 
       meeting.notes = payload.notes ?? meeting.notes;
       await writeDb(db);
-      return meeting;
+      return withoutFields(meeting, ["ownerUsername"]);
     },
     async exportSeed() {
-      return clone(await readDb());
+      return clone(await readPreparedDb());
     }
   };
 }

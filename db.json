@@ -24,19 +24,22 @@
       "id": 1,
       "name": "Schedule Tracker Rollout",
       "ownerId": 1,
-      "status": "On track"
+      "status": "On track",
+      "createdByUsername": "admin"
     },
     {
       "id": 2,
       "name": "Attendance Policy Review",
       "ownerId": 3,
-      "status": "At risk"
+      "status": "At risk",
+      "createdByUsername": "admin"
     },
     {
       "id": 3,
       "name": "Meeting Notes Archive",
       "ownerId": 2,
-      "status": "Completed"
+      "status": "Completed",
+      "createdByUsername": "admin"
     }
   ],
   "holidays": [
@@ -44,48 +47,56 @@
       "id": 1,
       "name": "Annual leave",
       "used": 9,
-      "total": 18
+      "total": 18,
+      "ownerUsername": "admin"
     },
     {
       "id": 2,
       "name": "Sick leave",
       "used": 3,
-      "total": 10
+      "total": 10,
+      "ownerUsername": "admin"
     },
     {
       "id": 3,
       "name": "Casual leave",
       "used": 4,
-      "total": 8
+      "total": 8,
+      "ownerUsername": "admin"
     },
     {
       "id": 4,
       "name": "Restricted holiday",
       "used": 1,
-      "total": 3
+      "total": 3,
+      "ownerUsername": "admin"
     },
     {
       "id": 5,
       "name": "Compensatory off",
       "used": 2,
-      "total": 5
+      "total": 5,
+      "ownerUsername": "admin"
     }
   ],
   "todos": [
     {
       "id": 1,
       "text": "Finalize monthly leave policy draft",
-      "done": false
+      "done": false,
+      "ownerUsername": "admin"
     },
     {
       "id": 2,
       "text": "Update project Alpha schedule",
-      "done": true
+      "done": true,
+      "ownerUsername": "admin"
     },
     {
       "id": 3,
       "text": "Send meeting summary to stakeholders",
-      "done": false
+      "done": false,
+      "ownerUsername": "admin"
     }
   ],
   "meetings": [
@@ -93,19 +104,22 @@
       "id": 1,
       "title": "Daily Operations Standup",
       "meta": "09:00 AM | Core team | 20 min",
-      "notes": "Review yesterday's blockers.\nConfirm today's critical tasks.\nUpdate any leave or meeting conflicts."
+      "notes": "Review yesterday's blockers.\nConfirm today's critical tasks.\nUpdate any leave or meeting conflicts.",
+      "ownerUsername": "admin"
     },
     {
       "id": 2,
       "title": "Weekly Project Governance",
       "meta": "Tuesday | PMO and department leads",
-      "notes": "Track milestone drift.\nReview risk register.\nConfirm decisions and owners."
+      "notes": "Track milestone drift.\nReview risk register.\nConfirm decisions and owners.",
+      "ownerUsername": "admin"
     },
     {
       "id": 3,
       "title": "Holiday and Workforce Review",
       "meta": "Thursday | HR and team managers",
-      "notes": "Approve pending leave.\nCheck holiday type allocations.\nResolve overlap in staffing schedules."
+      "notes": "Approve pending leave.\nCheck holiday type allocations.\nResolve overlap in staffing schedules.",
+      "ownerUsername": "admin"
     }
   ],
   "schedules": [
@@ -115,7 +129,8 @@
       "day": "Tue",
       "title": "Design workshop",
       "note": "Phase 2 planning",
-      "color": "#61b15a"
+      "color": "#61b15a",
+      "ownerUsername": "admin"
     },
     {
       "id": 2,
@@ -123,7 +138,8 @@
       "day": "Thu",
       "title": "Release prep",
       "note": "Portal upgrade",
-      "color": "#2563eb"
+      "color": "#2563eb",
+      "ownerUsername": "admin"
     },
     {
       "id": 3,
@@ -131,7 +147,8 @@
       "day": "Week 4",
       "title": "Holiday balance review",
       "note": "Carry forward planning",
-      "color": "#0f8b8d"
+      "color": "#0f8b8d",
+      "ownerUsername": "admin"
     }
   ],
   "finances": [
@@ -141,7 +158,8 @@
       "type": "Budget",
       "amount": 150000,
       "status": "Approved",
-      "note": "Initial platform implementation budget"
+      "note": "Initial platform implementation budget",
+      "createdByUsername": "admin"
     },
     {
       "id": 2,
@@ -149,7 +167,8 @@
       "type": "Expense",
       "amount": 42000,
       "status": "Pending",
-      "note": "Policy review and documentation support"
+      "note": "Policy review and documentation support",
+      "createdByUsername": "admin"
     }
   ]
 }

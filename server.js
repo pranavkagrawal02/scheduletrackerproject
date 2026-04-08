@@ -117,14 +117,25 @@ function normalizeNumber(value) {
   return Number(value);
 }
 
+function getRequestActor(request) {
+  const username = normalizeText(request.headers["x-auth-username"]);
+  const employeeCode = normalizeText(request.headers["x-auth-employee-code"]);
+  return {
+    username: username || null,
+    employeeCode: employeeCode || null
+  };
+}
+
 async function handleApi(request, response, pathname) {
+  const actor = getRequestActor(request);
+
   if (request.method === "POST" && pathname === "/api/login") {
     const body = await parseBody(request);
     const username = normalizeText(body.username);
     const password = String(body.password || "");
     const user = await store.validateLogin(username, password);
     if (!user) {
-      sendJson(response, 401, { error: "Invalid login. Use admin / admin for now." });
+      sendJson(response, 401, { error: "Invalid username or password." });
       return;
     }
 
@@ -133,7 +144,7 @@ async function handleApi(request, response, pathname) {
   }
 
   if (request.method === "GET" && pathname === "/api/bootstrap") {
-    sendJson(response, 200, await store.getBootstrap());
+    sendJson(response, 200, await store.getBootstrap(actor));
     return;
   }
 
@@ -165,7 +176,7 @@ async function handleApi(request, response, pathname) {
       return;
     }
 
-    sendJson(response, 201, await store.createProject(payload));
+    sendJson(response, 201, await store.createProject(payload, actor));
     return;
   }
 
@@ -183,7 +194,7 @@ async function handleApi(request, response, pathname) {
       return;
     }
 
-    sendJson(response, 201, await store.createFinance(payload));
+    sendJson(response, 201, await store.createFinance(payload, actor));
     return;
   }
 
@@ -196,7 +207,7 @@ async function handleApi(request, response, pathname) {
       amount: body.amount === undefined ? undefined : normalizeNumber(body.amount),
       status: body.status === undefined ? undefined : normalizeText(body.status),
       note: body.note === undefined ? undefined : normalizeText(body.note)
-    });
+    }, actor);
     if (!finance) {
       notFound(response);
       return;
@@ -208,7 +219,7 @@ async function handleApi(request, response, pathname) {
 
   if (request.method === "DELETE" && pathname.startsWith("/api/finances/")) {
     const financeId = Number(pathname.split("/").pop());
-    const deleted = await store.deleteFinance(financeId);
+    const deleted = await store.deleteFinance(financeId, actor);
     if (!deleted) {
       notFound(response);
       return;
@@ -231,7 +242,7 @@ async function handleApi(request, response, pathname) {
       return;
     }
 
-    sendJson(response, 201, await store.createHoliday(payload));
+    sendJson(response, 201, await store.createHoliday(payload, actor));
     return;
   }
 
@@ -242,7 +253,7 @@ async function handleApi(request, response, pathname) {
       name: body.name === undefined ? undefined : normalizeText(body.name),
       used: body.used === undefined ? undefined : normalizeNumber(body.used),
       total: body.total === undefined ? undefined : normalizeNumber(body.total)
-    });
+    }, actor);
     if (!holiday) {
       notFound(response);
       return;
@@ -266,7 +277,7 @@ async function handleApi(request, response, pathname) {
       return;
     }
 
-    sendJson(response, 201, await store.createSchedule(payload));
+    sendJson(response, 201, await store.createSchedule(payload, actor));
     return;
   }
 
@@ -279,7 +290,7 @@ async function handleApi(request, response, pathname) {
       title: body.title === undefined ? undefined : normalizeText(body.title),
       note: body.note === undefined ? undefined : normalizeText(body.note),
       color: body.color === undefined ? undefined : normalizeText(body.color)
-    });
+    }, actor);
     if (!schedule) {
       notFound(response);
       return;
@@ -291,7 +302,7 @@ async function handleApi(request, response, pathname) {
 
   if (request.method === "DELETE" && pathname.startsWith("/api/schedules/")) {
     const scheduleId = Number(pathname.split("/").pop());
-    const deleted = await store.deleteSchedule(scheduleId);
+    const deleted = await store.deleteSchedule(scheduleId, actor);
     if (!deleted) {
       notFound(response);
       return;
@@ -310,14 +321,14 @@ async function handleApi(request, response, pathname) {
       return;
     }
 
-    sendJson(response, 201, await store.createTodo(payload));
+    sendJson(response, 201, await store.createTodo(payload, actor));
     return;
   }
 
   if (request.method === "PATCH" && pathname.startsWith("/api/todos/")) {
     const todoId = Number(pathname.split("/").pop());
     const body = await parseBody(request);
-    const todo = await store.updateTodo(todoId, { done: body.done === undefined ? undefined : Boolean(body.done) });
+    const todo = await store.updateTodo(todoId, { done: body.done === undefined ? undefined : Boolean(body.done) }, actor);
     if (!todo) {
       notFound(response);
       return;
@@ -329,7 +340,7 @@ async function handleApi(request, response, pathname) {
 
   if (request.method === "DELETE" && pathname.startsWith("/api/todos/")) {
     const todoId = Number(pathname.split("/").pop());
-    const deleted = await store.deleteTodo(todoId);
+    const deleted = await store.deleteTodo(todoId, actor);
     if (!deleted) {
       notFound(response);
       return;
@@ -343,7 +354,7 @@ async function handleApi(request, response, pathname) {
   if (request.method === "PATCH" && pathname.startsWith("/api/meetings/")) {
     const meetingId = Number(pathname.split("/").pop());
     const body = await parseBody(request);
-    const meeting = await store.updateMeeting(meetingId, { notes: body.notes === undefined ? undefined : String(body.notes) });
+    const meeting = await store.updateMeeting(meetingId, { notes: body.notes === undefined ? undefined : String(body.notes) }, actor);
     if (!meeting) {
       notFound(response);
       return;
