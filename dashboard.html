@@ -16,9 +16,8 @@
       <nav class="sidebar-nav">
         <button class="nav-link active" type="button" data-view="dashboard">Dashboard</button>
         <button class="nav-link" type="button" data-view="organization">Organization</button>
-        <button class="nav-link" type="button" data-view="schedules">Schedules</button>
         <button class="nav-link" type="button" data-view="projects">Projects</button>
-        <button class="nav-link" type="button" data-view="leave">Calender</button>
+        <button class="nav-link" type="button" data-view="leave">Calendar</button>
         <button class="nav-link" type="button" data-view="meetings">Meetings</button>
       </nav>
 
@@ -46,7 +45,7 @@
       <div class="sidebar-user">
         <div>
           <p class="eyebrow">Signed in</p>
-          <strong id="currentUserLabel">admin</strong>
+          <strong id="currentUserLabel">Not signed in</strong>
         </div>
         <button id="logoutBtn" type="button">Logout</button>
       </div>
@@ -56,30 +55,20 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Planning workspace</p>
-          <h1 id="welcomeTitle">Welcome, admin</h1>
+          <h1 id="welcomeTitle">Welcome</h1>
         </div>
 
-        <div class="topbar-actions">
-          <div class="mode-switch" id="topbarModeSwitch" role="tablist" aria-label="View range">
-            <button class="mode-pill" data-range="daily">Daily</button>
-            <button class="mode-pill active" data-range="weekly">Weekly</button>
-            <button class="mode-pill" data-range="monthly">Monthly</button>
-          </div>
-        </div>
       </header>
 
       <section class="workspace-tabs hidden" id="workspaceTabs">
         <div class="workspace-tabbar">
           <div class="workspace-tablist" id="workspaceTabList"></div>
-          <div class="workspace-tabtools">
-            <button class="workspace-add-btn" id="workspaceAddBtn" type="button" aria-haspopup="true" aria-expanded="false">+</button>
-            <div class="workspace-menu hidden" id="workspaceMenu"></div>
-          </div>
         </div>
         <article class="panel workspace-placeholder hidden" id="workspacePlaceholder">
           <p class="panel-kicker" id="workspacePlaceholderKicker">Workspace tab</p>
           <h2 id="workspacePlaceholderTitle">Feature tab</h2>
           <p class="muted" id="workspacePlaceholderText">Feature details will appear here.</p>
+          <div class="workspace-panel-body" id="workspacePanelBody"></div>
         </article>
       </section>
 
@@ -101,17 +90,6 @@
           </div>
         </section>
 
-        <section class="panel wide-panel view-panel" data-section="dashboard">
-          <div class="panel-heading">
-            <div>
-              <p class="panel-kicker">Operational snapshot</p>
-              <h2>Workspace signals</h2>
-            </div>
-            <p class="muted">Live counts for users, projects, tasks, meetings, schedules, and leave coverage.</p>
-          </div>
-          <div class="metric-grid" id="metricGrid"></div>
-        </section>
-
         <section class="panel status-panel view-panel" data-section="dashboard">
           <div class="panel-heading">
             <div>
@@ -123,30 +101,7 @@
           <div class="record-list compact-list" id="projectStatusList"></div>
         </section>
 
-        <section class="panel wide-panel view-panel" data-section="dashboard">
-          <div class="panel-heading">
-            <div>
-              <p class="panel-kicker">Forecast vs capacity</p>
-              <h2>Schedule utilization</h2>
-            </div>
-            <p class="muted" id="capacityCaption">Using 78% of planned team capacity this week.</p>
-          </div>
-          <div class="capacity-card">
-            <div class="capacity-labels">
-              <span>Forecast versus available hours</span>
-              <strong id="capacityPercent">78%</strong>
-            </div>
-            <div class="capacity-bar">
-              <div class="capacity-fill" id="capacityFill"></div>
-            </div>
-            <div class="capacity-scale">
-              <span>0%</span>
-              <span>100%</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel schedule-panel wide-panel view-panel" data-section="dashboard schedules">
+        <section class="panel schedule-panel wide-panel view-panel hidden" data-section="dashboard schedules">
           <div class="panel-heading">
             <div>
               <p class="panel-kicker">Schedule manager</p>
@@ -200,8 +155,8 @@
             <article class="panel leave-card leave-card-calendar">
               <div class="panel-heading">
                 <div>
-                  <p class="panel-kicker">Calender</p>
-                  <h2>Calender</h2>
+                  <p class="panel-kicker">Calendar</p>
+                  <h2>Calendar</h2>
                 </div>
                 <p class="muted" id="leaveCalendarMeta">Monthly planning overview.</p>
               </div>
@@ -284,18 +239,8 @@
 
               <div class="holiday-grid" id="holidayGrid"></div>
             </article>
-          </div>
-        </section>
 
-        <section class="panel analytics-panel view-panel" data-section="dashboard projects">
-          <div class="panel-heading">
-            <div>
-              <p class="panel-kicker">Activity analytics</p>
-              <h2>Daily hours by team</h2>
-            </div>
-            <p class="muted">Compares effort across core groups for the selected range.</p>
           </div>
-          <svg class="bar-chart" id="barChart" viewBox="0 0 460 220" role="img" aria-label="Team hour chart"></svg>
         </section>
 
         <section class="panel team-panel view-panel" data-section="dashboard projects">
@@ -383,19 +328,42 @@
           <div class="record-list" id="financeList"></div>
         </section>
 
-        <section class="panel todo-panel view-panel" data-section="dashboard">
+        <section class="panel leave-card leave-card-wide view-panel" data-section="dashboard">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">Action list</p>
-              <h2>To-do planner</h2>
+              <p class="panel-kicker">Day planner</p>
+              <h2 id="calendarPlannerTitle">Selected day</h2>
             </div>
-            <p class="muted">Create and complete tasks directly from the dashboard.</p>
+            <p class="muted" id="calendarPlannerMeta">Click any date in the calendar to view deadlines and manage schedules for that day.</p>
           </div>
-          <form id="todoForm" class="todo-form">
-            <input id="todoInput" type="text" placeholder="Add a task for today, week, or month" maxlength="90">
-            <button type="submit">Add task</button>
+          <div class="calendar-planner-grid">
+            <section class="calendar-planner-card">
+              <h3>Project deadlines</h3>
+              <div class="calendar-planner-list" id="calendarProjectDeadlineList"></div>
+            </section>
+            <section class="calendar-planner-card">
+              <h3>Schedules for this day</h3>
+              <div class="calendar-planner-list" id="calendarScheduleList"></div>
+            </section>
+          </div>
+          <form class="stack-form calendar-schedule-form" id="calendarScheduleForm">
+            <div class="form-grid">
+              <input id="calendarScheduleTitleInput" type="text" placeholder="Schedule title" maxlength="80">
+              <select id="calendarScheduleColorInput">
+                <option value="#2563eb">Blue - Project</option>
+                <option value="#0f8b8d">Teal - Meeting</option>
+                <option value="#61b15a">Green - Task</option>
+                <option value="#e6a817">Gold - Leave</option>
+                <option value="#e85d75">Rose - Risk</option>
+                <option value="#6b7280">Gray - General</option>
+              </select>
+            </div>
+            <input id="calendarScheduleNoteInput" type="text" placeholder="Short note, time, or context" maxlength="100">
+            <div class="action-row">
+              <button type="submit" id="calendarScheduleSubmitBtn">Add schedule for day</button>
+              <button type="button" class="ghost-btn" id="calendarScheduleCancelBtn">Cancel edit</button>
+            </div>
           </form>
-          <ul class="todo-list" id="todoList"></ul>
         </section>
 
         <section class="panel meeting-panel view-panel" data-section="meetings">

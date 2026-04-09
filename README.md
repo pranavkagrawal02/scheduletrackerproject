@@ -14,7 +14,7 @@ The app now supports two local storage modes:
 - frontend served locally by `server.js`
 - default data stored in local [db.json](/d:/PranavData/scheduleTrackerProject/db.json)
 - optional SQL Server storage for SSMS / SQL Server Express setups
-- refreshed dashboard UI with project watch cards, operational metrics, an organization view, a real month calendar, and a full meetings workspace
+- refreshed dashboard UI with project watch cards, an organization view, a real month calendar, a dashboard day planner, and a full meetings workspace
 
 ## Quick Start
 
@@ -41,7 +41,7 @@ Important:
 
 - `admin / admin` is a development/demo login in local mode
 - in JSON mode, the app does not authenticate against the `users` list inside [db.json](/d:/PranavData/scheduleTrackerProject/db.json)
-- local JSON login currently allows the configured demo admin account and other demo-style same-value logins handled in [src/store/json-store.js](/d:/PranavData/scheduleTrackerProject/src/store/json-store.js)
+- local JSON login now only allows the configured demo admin account handled in [src/store/json-store.js](/d:/PranavData/scheduleTrackerProject/src/store/json-store.js)
 
 If port `3000` is free on your machine, you can also use:
 
@@ -71,7 +71,7 @@ You can also create a local `.env` file from [.env.example](/d:/PranavData/sched
 
 Authentication behavior:
 
-- when SQL env vars are not set, the app uses the JSON store and a development/demo login flow
+- when SQL env vars are not set, the app uses the JSON store and a development/demo login flow for the configured demo admin account
 - in that JSON mode, `admin / admin` comes from code configuration, not from a user record in [db.json](/d:/PranavData/scheduleTrackerProject/db.json)
 - when `SQL_SERVER` and `SQL_DATABASE` are set, the app switches to SQL Server-backed login checks against `dbo.users`
 
@@ -171,9 +171,10 @@ Important:
 - in JSON mode, authentication is demo-oriented and does not read passwords from `db.json.users`
 - if `SQL_SERVER` and `SQL_DATABASE` are set, the app uses SQL Server
 - the SQL store expects your SSMS database tables to exist
-- the dashboard now shows recent project cards, live workspace counts, and a separate organization tab
+- the dashboard now shows recent project cards, a separate organization tab, and a day-planner schedule component
 - frontend source files are `dashboard.html`, `dashboard-dynamic.js`, and `styles.css`; after editing them, run `node scripts/sync-public.js`
 - if `localhost:3000` is still serving an older backend after code changes, restart `server.js` so new API routes such as `POST /api/meetings` are active
+- after removing dashboard sections from `dashboard.html`, make matching null-safe updates in `dashboard-dynamic.js` so startup does not stop on missing DOM nodes
 
 ## Calendar And Leave
 
@@ -244,7 +245,7 @@ Current component mapping:
 
 - `Schedules` component -> `dbo.employeeSchedule`
 - `Projects` component -> `dbo.employeeProject`
-- `Calender` component -> `dbo.employeeCalendar`
+- `Calendar` component -> `dbo.employeeCalendar`
 - `Meetings` component -> `dbo.employeeCalendar` when unified calendar exists, otherwise legacy `dbo.employeeMeeting`
 - `Organization` component -> `dbo.users`
 
@@ -260,7 +261,7 @@ Current module flow:
 - `Projects`
   - fetches rows from `dbo.employeeProject` for the logged-in `EmpID`
   - add, edit, and delete actions write back to `dbo.employeeProject`
-- `Calender`
+- `Calendar`
   - fetches rows from `dbo.employeeCalendar` for the logged-in `EmpID`
   - add, edit, and delete actions write back to `dbo.employeeCalendar`
 - `Meetings`

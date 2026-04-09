@@ -46,6 +46,18 @@ function assignLegacyOwnership(db) {
   return changed;
 }
 
+function ensureProjectCollections(db) {
+  if (!Array.isArray(db.projectUpdates)) {
+    db.projectUpdates = [];
+  }
+  if (!Array.isArray(db.publicHolidays)) {
+    db.publicHolidays = [];
+  }
+  if (!Array.isArray(db.leaveEvents)) {
+    db.leaveEvents = [];
+  }
+}
+
 function filterByOwner(items, ownerKey, username) {
   return (items || []).filter((item) => normalizeUsername(item[ownerKey]) === username);
 }
@@ -70,6 +82,7 @@ function createJsonStore({ dbPath }) {
 
   async function readPreparedDb() {
     const db = await readDb();
+    ensureProjectCollections(db);
     if (assignLegacyOwnership(db)) {
       await writeDb(db);
     }
@@ -85,7 +98,10 @@ function createJsonStore({ dbPath }) {
       return {
         users: clone(db.users || []),
         projects: filterByOwner(db.projects, "createdByUsername", actorUsername).map((item) => withoutFields(item, ["createdByUsername"])),
+        projectUpdates: filterByOwner(db.projectUpdates, "createdByUsername", actorUsername).map((item) => withoutFields(item, ["createdByUsername"])),
         holidays: filterByOwner(db.holidays, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
+        publicHolidays: filterByOwner(db.publicHolidays, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
+        leaveEvents: filterByOwner(db.leaveEvents, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
         todos: filterByOwner(db.todos, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
         meetings: filterByOwner(db.meetings, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
         schedules: filterByOwner(db.schedules, "ownerUsername", actorUsername).map((item) => withoutFields(item, ["ownerUsername"])),
@@ -95,14 +111,15 @@ function createJsonStore({ dbPath }) {
     async validateLogin(username, password) {
       const adminUser = process.env.DEMO_ADMIN_USERNAME || "admin";
       const adminPassword = process.env.DEMO_ADMIN_PASSWORD || "admin";
-      const valid = (username === adminUser && password === adminPassword) || (username && username === password);
+      const valid = username === adminUser && password === adminPassword;
       if (!valid) {
         return null;
       }
 
       return {
         username,
-        role: username === adminUser ? "Administrator" : "Demo user"
+        role: "Administrator",
+        name: "Administrator"
       };
     },
     async createUser(payload) {
@@ -124,11 +141,87 @@ function createJsonStore({ dbPath }) {
         name: payload.name,
         ownerId: payload.ownerId,
         status: payload.status,
+        priority: payload.priority,
+        statusRemark: "",
+        statusUpdatedAt: "",
+        budget: 0,
+        spentAmount: 0,
+        pendingAmount: 0,
+        remainingAmount: 0,
+        financeRemark: "",
+        financeUpdatedAt: "",
+        deadlineDate: "",
         createdByUsername: getActorUsername(actor)
       };
       db.projects.unshift(project);
       await writeDb(db);
       return withoutFields(project, ["createdByUsername"]);
+    },
+    async updateProject(id, payload, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const project = db.projects.find((item) => item.id === id && normalizeUsername(item.createdByUsername) === actorUsername);
+      if (!project) {
+        return null;
+      }
+
+      const currentBudget = Number(project.budget || 0);
+      const currentSpent = Number(project.spentAmount || 0);
+      const currentPending = Number(project.pendingAmount || 0);
+      const currentRemaining = Number(project.remainingAmount || 0);
+      const nextBudget = payload.budget ?? currentBudget;
+      const nextSpent = payload.spentAmount ?? (currentSpent + Number(payload.expenseDelta || 0));
+      const nextPending = payload.pendingAmount ?? currentPending;
+      const nextRemaining = payload.remainingAmount ?? (payload.savingsDelta !== undefined ? currentRemaining + Number(payload.savingsDelta || 0) - Number(payload.expenseDelta || 0) : nextBudget - nextSpent);
+
+      project.status = payload.status ?? project.status;
+      project.priority = payload.priority ?? project.priority ?? "Medium";
+      project.statusRemark = payload.statusRemark ?? project.statusRemark ?? "";
+      project.statusUpdatedAt = payload.statusUpdatedAt ?? project.statusUpdatedAt ?? "";
+      project.budget = nextBudget;
+      project.spentAmount = nextSpent;
+      project.pendingAmount = nextPending;
+      project.remainingAmount = nextRemaining;
+      project.financeRemark = payload.financeRemark ?? project.financeRemark ?? "";
+      project.financeUpdatedAt = payload.financeUpdatedAt ?? project.financeUpdatedAt ?? "";
+      project.deadlineDate = payload.deadlineDate ?? project.deadlineDate ?? "";
+
+      const updateRow = {
+        id: nextId(db.projectUpdates),
+        projectId: project.id,
+        ownerId: project.ownerId,
+        status: project.status,
+        priority: project.priority,
+        statusRemark: project.statusRemark,
+        statusUpdatedAt: project.statusUpdatedAt,
+        budget: project.budget,
+        spentAmount: project.spentAmount,
+        pendingAmount: project.pendingAmount,
+        remainingAmount: project.remainingAmount,
+        financeRemark: project.financeRemark,
+        financeUpdatedAt: project.financeUpdatedAt,
+        createdAt: new Date().toISOString(),
+        createdByUsername: actorUsername
+      };
+      db.projectUpdates.unshift(updateRow);
+      await writeDb(db);
+      return {
+        project: withoutFields(project, ["createdByUsername"]),
+        projectUpdates: filterByOwner(db.projectUpdates, "createdByUsername", actorUsername).map((item) => withoutFields(item, ["createdByUsername"]))
+      };
+    },
+    async deleteProject(id, actor) {
+      const db = await readPreparedDb();
+      const actorUsername = getActorUsername(actor);
+      const index = db.projects.findIndex((item) => item.id === id && normalizeUsername(item.createdByUsername) === actorUsername);
+      if (index === -1) {
+        return false;
+      }
+      db.projects.splice(index, 1);
+      db.projectUpdates = (db.projectUpdates || []).filter((item) => Number(item.projectId) !== Number(id));
+      db.finances = (db.finances || []).filter((item) => Number(item.projectId) !== Number(id));
+      await writeDb(db);
+      return true;
     },
     async createFinance(payload, actor) {
       const db = await readPreparedDb();
@@ -188,12 +281,36 @@ function createJsonStore({ dbPath }) {
     },
     async createHoliday(payload, actor) {
       const db = await readPreparedDb();
+      const ownerUsername = getActorUsername(actor);
+
+      if (payload.holidayDate) {
+        const holidayDate = new Date(payload.holidayDate);
+        if (Number.isNaN(holidayDate.getTime())) {
+          throw new Error("A valid holiday date is required.");
+        }
+
+        const normalizedDate = String(payload.holidayDate);
+        const publicHoliday = {
+          id: nextId(db.publicHolidays),
+          name: payload.name,
+          holidayDate: normalizedDate,
+          year: holidayDate.getFullYear(),
+          month: holidayDate.toLocaleDateString("en-US", { month: "long" }),
+          date: holidayDate.getDate(),
+          day: holidayDate.toLocaleDateString("en-US", { weekday: "long" }),
+          ownerUsername
+        };
+        db.publicHolidays.unshift(publicHoliday);
+        await writeDb(db);
+        return withoutFields(publicHoliday, ["ownerUsername"]);
+      }
+
       const holiday = {
         id: nextId(db.holidays),
         name: payload.name,
         used: payload.used,
         total: payload.total,
-        ownerUsername: getActorUsername(actor)
+        ownerUsername
       };
       db.holidays.unshift(holiday);
       await writeDb(db);
@@ -202,11 +319,33 @@ function createJsonStore({ dbPath }) {
     async updateHoliday(id, payload, actor) {
       const db = await readPreparedDb();
       const actorUsername = getActorUsername(actor);
+
+      if (payload.holidayDate !== undefined) {
+        const holiday = db.publicHolidays.find((item) => item.id === id && normalizeUsername(item.ownerUsername) === actorUsername);
+        if (!holiday) {
+          return null;
+        }
+
+        const nextDateValue = payload.holidayDate ?? holiday.holidayDate;
+        const holidayDate = new Date(nextDateValue);
+        if (Number.isNaN(holidayDate.getTime())) {
+          throw new Error("A valid holiday date is required.");
+        }
+
+        holiday.name = payload.name ?? holiday.name;
+        holiday.holidayDate = String(nextDateValue);
+        holiday.year = holidayDate.getFullYear();
+        holiday.month = holidayDate.toLocaleDateString("en-US", { month: "long" });
+        holiday.date = holidayDate.getDate();
+        holiday.day = holidayDate.toLocaleDateString("en-US", { weekday: "long" });
+        await writeDb(db);
+        return withoutFields(holiday, ["ownerUsername"]);
+      }
+
       const holiday = db.holidays.find((item) => item.id === id && normalizeUsername(item.ownerUsername) === actorUsername);
       if (!holiday) {
         return null;
       }
-
       holiday.name = payload.name ?? holiday.name;
       holiday.used = payload.used ?? holiday.used;
       holiday.total = payload.total ?? holiday.total;
@@ -219,6 +358,7 @@ function createJsonStore({ dbPath }) {
         id: nextId(db.schedules),
         range: payload.range,
         day: payload.day,
+        scheduleDate: payload.scheduleDate || payload.day,
         title: payload.title,
         note: payload.note,
         color: payload.color,
@@ -238,6 +378,7 @@ function createJsonStore({ dbPath }) {
 
       schedule.range = payload.range ?? schedule.range;
       schedule.day = payload.day ?? schedule.day;
+      schedule.scheduleDate = payload.scheduleDate ?? payload.day ?? schedule.scheduleDate;
       schedule.title = payload.title ?? schedule.title;
       schedule.note = payload.note ?? schedule.note;
       schedule.color = payload.color ?? schedule.color;

@@ -532,6 +532,384 @@ button:active {
   margin-top: 14px;
 }
 
+.workspace-panel-body {
+  margin-top: 20px;
+}
+
+.workspace-project-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 18px;
+  align-items: start;
+}
+
+.workspace-project-main {
+  min-width: 0;
+}
+
+.workspace-project-sidebar {
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(21, 35, 59, 0.08);
+  box-shadow: 0 18px 36px rgba(21, 35, 59, 0.08);
+}
+
+.workspace-project-tabstack {
+  display: grid;
+  gap: 10px;
+}
+
+.workspace-project-pill {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.workspace-project-pill:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e6efff 100%);
+}
+
+.workspace-project-list,
+.workspace-finance-records {
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-project-card,
+.workspace-finance-record,
+.workspace-empty-state {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(21, 35, 59, 0.04);
+  border: 1px solid rgba(21, 35, 59, 0.08);
+}
+
+.workspace-empty-state-compact {
+  padding: 14px;
+}
+
+.workspace-card-meta {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--muted);
+}
+
+.workspace-card-meta p {
+  margin: 0;
+}
+
+.workspace-card-meta strong {
+  color: var(--ink);
+}
+
+.workspace-card-meta-wide {
+  margin-bottom: 18px;
+}
+
+.workspace-project-card-top,
+.workspace-finance-record,
+.workspace-project-hero,
+.workspace-finance-head,
+.workspace-finance-row {
+  display: grid;
+  gap: 14px;
+  align-items: center;
+}
+
+.workspace-project-card-top,
+.workspace-project-hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.workspace-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.workspace-stat-grid-wide {
+  margin-bottom: 16px;
+}
+
+.workspace-stat-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(21, 35, 59, 0.08);
+}
+
+.workspace-stat-card span,
+.workspace-project-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.workspace-stat-card strong,
+.workspace-project-hero h3,
+.workspace-finance-record strong,
+.workspace-finance-row strong {
+  font-size: 1.08rem;
+  color: var(--ink);
+}
+
+.workspace-project-card h3,
+.workspace-finance-record h3,
+.workspace-empty-state h3,
+.workspace-finance-row h3 {
+  margin: 0 0 6px;
+}
+
+.workspace-project-card p,
+.workspace-finance-record p,
+.workspace-empty-state p,
+.workspace-finance-row p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.workspace-finance-table {
+  display: grid;
+  gap: 10px;
+}
+
+.workspace-update-history {
+  margin-top: 18px;
+}
+
+.workspace-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+  margin-bottom: 18px;
+}
+
+.workspace-edit-card {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(21, 35, 59, 0.04);
+  border: 1px solid rgba(21, 35, 59, 0.08);
+}
+
+.workspace-edit-card .panel-heading {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+}
+
+.workspace-edit-card .panel-heading .panel-kicker {
+  margin-bottom: 8px;
+}
+
+.workspace-edit-card .panel-heading h2 {
+  font-size: 1.45rem;
+}
+
+.workspace-edit-card h2 {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 16px;
+  line-height: 1.15;
+}
+
+.workspace-edit-card-finance .panel-heading {
+  background: linear-gradient(135deg, rgba(15, 139, 141, 0.14), rgba(15, 139, 141, 0.04));
+  border: 1px solid rgba(15, 139, 141, 0.18);
+}
+
+.workspace-edit-card-finance .panel-heading .panel-kicker {
+  color: var(--teal);
+}
+
+.workspace-edit-card-finance .panel-heading h2 {
+  color: #0b5f60;
+  background: rgba(15, 139, 141, 0.12);
+}
+
+.workspace-edit-card-expense .panel-heading {
+  background: linear-gradient(135deg, rgba(230, 168, 23, 0.18), rgba(230, 168, 23, 0.05));
+  border: 1px solid rgba(230, 168, 23, 0.2);
+}
+
+.workspace-edit-card-expense .panel-heading .panel-kicker {
+  color: #9a6b00;
+}
+
+.workspace-edit-card-expense .panel-heading h2 {
+  color: #7f5700;
+  background: rgba(230, 168, 23, 0.16);
+}
+
+.workspace-edit-card-status .panel-heading {
+  background: linear-gradient(135deg, rgba(232, 93, 117, 0.14), rgba(232, 93, 117, 0.05));
+  border: 1px solid rgba(232, 93, 117, 0.18);
+}
+
+.workspace-edit-card-status .panel-heading .panel-kicker {
+  color: var(--rose);
+}
+
+.workspace-edit-card-status .panel-heading h2 {
+  color: #9d3047;
+  background: rgba(232, 93, 117, 0.12);
+}
+
+.workspace-inline-form {
+  gap: 12px;
+}
+
+.workspace-inline-form .form-field {
+  gap: 10px;
+}
+
+.workspace-inline-form .form-field span {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(21, 35, 59, 0.08);
+  color: var(--ink);
+}
+
+.workspace-inline-form input::placeholder {
+  color: #7d8799;
+  opacity: 1;
+}
+
+.workspace-inline-form input[type="date"] {
+  color: var(--ink);
+}
+
+.workspace-edit-card-finance .form-field span {
+  background: rgba(15, 139, 141, 0.14);
+  color: #0b5f60;
+}
+
+.workspace-edit-card-expense .form-field span {
+  background: rgba(230, 168, 23, 0.18);
+  color: #7f5700;
+}
+
+.workspace-edit-card-status .form-field span {
+  background: rgba(232, 93, 117, 0.14);
+  color: #9d3047;
+}
+
+.workspace-form-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.workspace-update-list {
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-remove-list {
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-remove-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(21, 35, 59, 0.04);
+  border: 1px solid rgba(21, 35, 59, 0.08);
+}
+
+.workspace-remove-card h3,
+.workspace-remove-card p {
+  margin: 0;
+}
+
+.workspace-remove-card p {
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.danger-btn {
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: #b42318;
+  color: #fff;
+  cursor: pointer;
+}
+
+.workspace-update-card {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(21, 35, 59, 0.04);
+  border: 1px solid rgba(21, 35, 59, 0.08);
+}
+
+.workspace-update-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.workspace-update-head h3 {
+  margin: 0 0 6px;
+}
+
+.workspace-update-head p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.workspace-update-stats {
+  margin-bottom: 14px;
+}
+
+.workspace-finance-head,
+.workspace-finance-row {
+  grid-template-columns: minmax(220px, 2.2fr) repeat(4, minmax(100px, 1fr));
+}
+
+.workspace-finance-head {
+  padding: 0 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.workspace-finance-row {
+  padding: 16px 14px;
+  border-radius: 18px;
+  background: rgba(21, 35, 59, 0.04);
+  border: 1px solid rgba(21, 35, 59, 0.08);
+}
+
 .leave-layout {
   grid-column: span 12;
 }
@@ -558,6 +936,10 @@ button:active {
   grid-column: span 6;
 }
 
+.leave-card-wide {
+  grid-column: span 12;
+}
+
 .panel {
   padding: 22px;
   border-radius: 28px;
@@ -571,17 +953,29 @@ button:active {
   grid-column: span 8;
 }
 
-.status-panel,
 .holidays-panel,
 .analytics-panel {
   grid-column: span 4;
 }
 
+.status-panel,
 .team-panel,
 .project-panel,
 .finance-panel,
 .todo-panel {
   grid-column: span 6;
+}
+
+.status-panel,
+.team-panel {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.status-panel .record-list,
+.team-panel .record-list {
+  flex: 1 1 auto;
 }
 
 .meeting-panel {
@@ -857,6 +1251,8 @@ button:active {
   justify-content: space-between;
   gap: 8px;
   font-weight: 700;
+  cursor: pointer;
+  text-align: left;
 }
 
 .leave-calendar-notes {
@@ -897,6 +1293,11 @@ button:active {
 .leave-calendar-cell.is-today {
   border-color: rgba(37, 99, 235, 0.35);
   box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.leave-calendar-cell.is-selected {
+  border-color: rgba(15, 139, 141, 0.4);
+  box-shadow: inset 0 0 0 2px rgba(15, 139, 141, 0.14);
 }
 
 .leave-calendar-cell.has-leave {
@@ -948,6 +1349,66 @@ button:active {
 .leave-badge-unpaid {
   background: rgba(232, 93, 117, 0.16);
   color: #a12f47;
+}
+
+.calendar-schedule-note,
+.calendar-deadline-note {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.calendar-schedule-note {
+  background: rgba(37, 99, 235, 0.12);
+  color: #173f9a;
+}
+
+.calendar-deadline-note {
+  background: rgba(232, 93, 117, 0.16);
+  color: #9d3047;
+}
+
+.calendar-planner-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.calendar-planner-card,
+.calendar-detail-item {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(21, 35, 59, 0.08);
+}
+
+.calendar-planner-card h3,
+.calendar-detail-item h3 {
+  margin: 0 0 8px;
+}
+
+.calendar-planner-list {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-detail-item {
+  display: grid;
+  gap: 10px;
+}
+
+.calendar-detail-item p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.calendar-schedule-form {
+  margin-top: 6px;
 }
 
 .leave-summary-grid,
@@ -1544,6 +2005,20 @@ button:active {
 
   .workspace-tabtools {
     align-self: flex-end;
+  }
+
+  .workspace-stat-grid,
+  .workspace-edit-grid,
+  .workspace-finance-head,
+  .workspace-finance-row,
+  .workspace-project-card-top,
+  .workspace-project-hero,
+  .workspace-update-head {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-project-shell {
+    grid-template-columns: 1fr;
   }
 
   .app-shell {

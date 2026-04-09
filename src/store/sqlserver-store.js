@@ -286,6 +286,19 @@ function normalizeHolidayDate(value) {
   return date;
 }
 
+function formatProjectDateTime(value) {
+  const date = coerceDate(value);
+  if (!date) return null;
+  return `${formatLocalDate(date)} ${formatLocalTime(date) || "00:00"}`;
+}
+
+function coerceProjectDateTime(value) {
+  const text = normalizeText(value);
+  if (!text) return null;
+  const normalized = text.length === 10 ? `${text}T00:00:00` : text.replace(" ", "T");
+  return coerceDate(normalized);
+}
+
 function createSqlServerStore() {
   const rawServer = String(process.env.SQL_SERVER || "").trim();
   const serverParts = rawServer.split("\\");
@@ -479,6 +492,7 @@ function createSqlServerStore() {
         id: Number(row.calendarId),
         range,
         day: metadata.day || inferScheduleDay(row.startDateTime, range),
+        scheduleDate: formatLocalDate(row.startDateTime),
         title: row.title,
         note: metadata.note || normalizeText(row.description),
         color: metadata.color || "#2563eb"
@@ -734,9 +748,37 @@ function createSqlServerStore() {
     }));
 
     let projects = [];
+    let projectUpdates = [];
     if (await tableExists("employeeProject")) {
+      const hasProjectStatusRemark = await columnExists("employeeProject", "projectStatusRemark");
+      const hasProjectStatusUpdatedAt = await columnExists("employeeProject", "projectStatusUpdatedAt");
+      const hasProjectPriority = await columnExists("employeeProject", "projectPriority");
+      const hasDeadlineDate = await columnExists("employeeProject", "endDate");
+      const hasProjectBudget = await columnExists("employeeProject", "projectBudget");
+      const hasProjectSpentAmount = await columnExists("employeeProject", "projectSpentAmount");
+      const hasProjectPendingAmount = await columnExists("employeeProject", "projectPendingAmount");
+      const hasProjectRemainingAmount = await columnExists("employeeProject", "projectRemainingAmount");
+      const hasProjectFinanceRemark = await columnExists("employeeProject", "projectFinanceRemark");
+      const hasProjectFinanceUpdatedAt = await columnExists("employeeProject", "projectFinanceUpdatedAt");
       const request = pool.request();
-      let query = `SELECT projectId, EmpID, projectName, projectStatus FROM dbo.employeeProject`;
+      let query = `
+        SELECT
+          projectId,
+          EmpID,
+          projectName,
+          projectStatus,
+          ${hasProjectPriority ? "projectPriority" : "N'Medium' AS projectPriority"},
+          ${hasProjectStatusRemark ? "projectStatusRemark" : "CAST(NULL AS NVARCHAR(1000)) AS projectStatusRemark"},
+          ${hasProjectStatusUpdatedAt ? "projectStatusUpdatedAt" : "CAST(NULL AS DATETIME2) AS projectStatusUpdatedAt"},
+          ${hasProjectBudget ? "projectBudget" : "CAST(0 AS DECIMAL(18,2)) AS projectBudget"},
+          ${hasProjectSpentAmount ? "projectSpentAmount" : "CAST(0 AS DECIMAL(18,2)) AS projectSpentAmount"},
+          ${hasProjectPendingAmount ? "projectPendingAmount" : "CAST(0 AS DECIMAL(18,2)) AS projectPendingAmount"},
+          ${hasProjectRemainingAmount ? "projectRemainingAmount" : "CAST(0 AS DECIMAL(18,2)) AS projectRemainingAmount"},
+          ${hasProjectFinanceRemark ? "projectFinanceRemark" : "CAST(NULL AS NVARCHAR(1000)) AS projectFinanceRemark"},
+          ${hasProjectFinanceUpdatedAt ? "projectFinanceUpdatedAt" : "CAST(NULL AS DATETIME2) AS projectFinanceUpdatedAt"},
+          ${hasDeadlineDate ? "endDate" : "CAST(NULL AS DATE) AS endDate"}
+        FROM dbo.employeeProject
+      `;
       if (actorEmpId) {
         request.input("EmpID", sql.Int, actorEmpId);
         query += ` WHERE EmpID = @EmpID`;
@@ -747,14 +789,67 @@ function createSqlServerStore() {
         id: Number(row.projectId),
         name: row.projectName,
         ownerId: Number(row.EmpID),
-        status: row.projectStatus || "Planned"
+        status: row.projectStatus || "Planned",
+        priority: row.projectPriority || "Medium",
+        statusRemark: row.projectStatusRemark || "",
+        statusUpdatedAt: formatProjectDateTime(row.projectStatusUpdatedAt),
+        budget: Number(row.projectBudget || 0),
+        spentAmount: Number(row.projectSpentAmount || 0),
+        pendingAmount: Number(row.projectPendingAmount || 0),
+        remainingAmount: Number(row.projectRemainingAmount || 0),
+        financeRemark: row.projectFinanceRemark || "",
+        financeUpdatedAt: formatProjectDateTime(row.projectFinanceUpdatedAt),
+        deadlineDate: formatLocalDate(row.endDate)
       }));
+
+      if (await tableExists("employeeProjectUpdateHistory")) {
+        const hasHistoryPriority = await columnExists("employeeProjectUpdateHistory", "projectPriority");
+        const updateRequest = pool.request();
+        let updateQuery = `
+          SELECT
+            projectUpdateId,
+            projectId,
+            EmpID,
+            projectStatus,
+            ${hasHistoryPriority ? "projectPriority," : ""}
+            projectStatusRemark,
+            projectStatusUpdatedAt,
+            projectBudget,
+            projectSpentAmount,
+            projectPendingAmount,
+            projectRemainingAmount,
+            projectFinanceRemark,
+            projectFinanceUpdatedAt,
+            createdAt
+          FROM dbo.employeeProjectUpdateHistory
+        `;
+        if (actorEmpId) {
+          updateRequest.input("EmpID", sql.Int, actorEmpId);
+          updateQuery += ` WHERE EmpID = @EmpID`;
+        }
+        updateQuery += ` ORDER BY projectStatusUpdatedAt DESC, projectUpdateId DESC`;
+        const updateResult = await updateRequest.query(updateQuery);
+        projectUpdates = updateResult.recordset.map((row) => ({
+          id: Number(row.projectUpdateId),
+          projectId: Number(row.projectId),
+          ownerId: Number(row.EmpID || 0) || null,
+          status: row.projectStatus || "Planned",
+          priority: row.projectPriority || "Medium",
+          statusRemark: row.projectStatusRemark || "",
+          statusUpdatedAt: formatProjectDateTime(row.projectStatusUpdatedAt),
+          budget: Number(row.projectBudget || 0),
+          spentAmount: Number(row.projectSpentAmount || 0),
+          pendingAmount: Number(row.projectPendingAmount || 0),
+          remainingAmount: Number(row.projectRemainingAmount || 0),
+          financeRemark: row.projectFinanceRemark || "",
+          financeUpdatedAt: formatProjectDateTime(row.projectFinanceUpdatedAt),
+          createdAt: formatProjectDateTime(row.createdAt)
+        }));
+      }
     }
 
     let schedules = [];
-    if (useUnifiedCalendar) {
-      schedules = await getCalendarSchedules(actorEmpId);
-    } else if (await tableExists("employeeSchedule")) {
+    if (await tableExists("employeeSchedule")) {
       const request = pool.request();
       let query = `
         SELECT
@@ -777,12 +872,15 @@ function createSqlServerStore() {
       const result = await request.query(query);
       schedules = result.recordset.map((row) => ({
         id: Number(row.scheduleId),
-        range: toDashboardRange(row.scheduleType),
+        range: "daily",
         day: row.scheduleDay || "",
+        scheduleDate: /^\d{4}-\d{2}-\d{2}$/.test(String(row.scheduleDay || "")) ? String(row.scheduleDay) : "",
         title: row.scheduleTitle,
         note: row.scheduleNote || [String(row.startTime || "").slice(0, 5), String(row.endTime || "").slice(0, 5)].filter(Boolean).join(" - "),
         color: "#2563eb"
       }));
+    } else if (useUnifiedCalendar) {
+      schedules = await getCalendarSchedules(actorEmpId);
     }
 
     let meetings = [];
@@ -852,6 +950,7 @@ function createSqlServerStore() {
     return {
       users,
       projects,
+      projectUpdates,
       holidays,
       publicHolidays: useUnifiedCalendar ? await getCalendarPublicHolidays() : [],
       leaveEvents: useUnifiedCalendar ? await getCalendarLeaveEvents(actorEmpId) : [],
@@ -982,18 +1081,23 @@ function createSqlServerStore() {
     }
 
     const ownerId = Number(payload.ownerId) || await getEffectiveEmpId(actor);
+    const hasProjectPriority = await columnExists("employeeProject", "projectPriority");
     const pool = await getPool();
-    const result = await pool.request()
+    const request = pool.request()
       .input("EmpID", sql.Int, ownerId)
       .input("projectName", sql.NVarChar(200), payload.name)
       .input("projectDescription", sql.NVarChar(500), `${payload.status} project`)
-      .input("projectStatus", sql.NVarChar(50), payload.status)
-      .query(`
+      .input("projectStatus", sql.NVarChar(50), payload.status);
+    if (hasProjectPriority) {
+      request.input("projectPriority", sql.NVarChar(20), payload.priority || "Medium");
+    }
+    const result = await request.query(`
         INSERT INTO dbo.employeeProject (
           EmpID,
           projectName,
           projectDescription,
           projectStatus
+          ${hasProjectPriority ? ", projectPriority" : ""}
         )
         OUTPUT inserted.projectId
         VALUES (
@@ -1001,6 +1105,7 @@ function createSqlServerStore() {
           @projectName,
           @projectDescription,
           @projectStatus
+          ${hasProjectPriority ? ", @projectPriority" : ""}
         )
       `);
 
@@ -1008,8 +1113,235 @@ function createSqlServerStore() {
       id: Number(result.recordset[0].projectId),
       name: payload.name,
       ownerId,
-      status: payload.status
+      status: payload.status,
+      priority: payload.priority || "Medium"
     };
+  }
+
+  async function updateProject(projectId, payload, actor) {
+    if (!(await tableExists("employeeProject"))) {
+      throw new Error("employeeProject table is not available in the database.");
+    }
+
+    const hasProjectStatusRemark = await columnExists("employeeProject", "projectStatusRemark");
+    const hasProjectStatusUpdatedAt = await columnExists("employeeProject", "projectStatusUpdatedAt");
+    const hasProjectPriority = await columnExists("employeeProject", "projectPriority");
+    const hasProjectBudget = await columnExists("employeeProject", "projectBudget");
+    const hasProjectSpentAmount = await columnExists("employeeProject", "projectSpentAmount");
+    const hasProjectPendingAmount = await columnExists("employeeProject", "projectPendingAmount");
+    const hasProjectRemainingAmount = await columnExists("employeeProject", "projectRemainingAmount");
+    const hasProjectFinanceRemark = await columnExists("employeeProject", "projectFinanceRemark");
+    const hasProjectFinanceUpdatedAt = await columnExists("employeeProject", "projectFinanceUpdatedAt");
+    const hasDeadlineDate = await columnExists("employeeProject", "endDate");
+    const hasHistoryTable = await tableExists("employeeProjectUpdateHistory");
+    const hasHistoryPriority = hasHistoryTable ? await columnExists("employeeProjectUpdateHistory", "projectPriority") : false;
+    const actorEmpId = await getEffectiveEmpId(actor);
+    const pool = await getPool();
+
+    const currentRequest = pool.request()
+      .input("projectId", sql.Int, Number(projectId));
+    let currentQuery = `
+      SELECT
+        projectId,
+        EmpID,
+        projectName,
+        projectStatus,
+        ${hasProjectPriority ? "projectPriority" : "N'Medium' AS projectPriority"},
+        ${hasProjectStatusRemark ? "projectStatusRemark" : "CAST(NULL AS NVARCHAR(1000)) AS projectStatusRemark"},
+        ${hasProjectStatusUpdatedAt ? "projectStatusUpdatedAt" : "CAST(NULL AS DATETIME2) AS projectStatusUpdatedAt"},
+        ${hasProjectBudget ? "projectBudget" : "CAST(0 AS DECIMAL(18,2)) AS projectBudget"},
+        ${hasProjectSpentAmount ? "projectSpentAmount" : "CAST(0 AS DECIMAL(18,2)) AS projectSpentAmount"},
+        ${hasProjectPendingAmount ? "projectPendingAmount" : "CAST(0 AS DECIMAL(18,2)) AS projectPendingAmount"},
+        ${hasProjectRemainingAmount ? "projectRemainingAmount" : "CAST(0 AS DECIMAL(18,2)) AS projectRemainingAmount"},
+        ${hasProjectFinanceRemark ? "projectFinanceRemark" : "CAST(NULL AS NVARCHAR(1000)) AS projectFinanceRemark"},
+        ${hasProjectFinanceUpdatedAt ? "projectFinanceUpdatedAt" : "CAST(NULL AS DATETIME2) AS projectFinanceUpdatedAt"},
+        ${hasDeadlineDate ? "endDate" : "CAST(NULL AS DATE) AS endDate"}
+      FROM dbo.employeeProject
+      WHERE projectId = @projectId
+    `;
+    if (actorEmpId) {
+      currentRequest.input("EmpID", sql.Int, actorEmpId);
+      currentQuery += ` AND EmpID = @EmpID`;
+    }
+    const currentResult = await currentRequest.query(currentQuery);
+    const current = currentResult.recordset[0];
+    if (!current) {
+      return null;
+    }
+
+    const nextBudget = payload.budget ?? Number(current.projectBudget || 0);
+    const nextSpent = payload.spentAmount ?? (Number(current.projectSpentAmount || 0) + Number(payload.expenseDelta || 0));
+    const nextPending = payload.pendingAmount ?? Number(current.projectPendingAmount || 0);
+    const baseRemaining = payload.remainingAmount ?? Number(current.projectRemainingAmount || 0);
+    const nextRemaining = payload.remainingAmount !== undefined
+      ? Number(payload.remainingAmount)
+      : (payload.savingsDelta !== undefined
+        ? baseRemaining + Number(payload.savingsDelta || 0) - Number(payload.expenseDelta || 0)
+        : nextBudget - nextSpent);
+    const nextStatus = payload.status ?? current.projectStatus;
+    const nextPriority = payload.priority ?? current.projectPriority ?? "Medium";
+    const nextStatusRemark = payload.statusRemark ?? current.projectStatusRemark ?? null;
+    const nextStatusUpdatedAt = coerceProjectDateTime(payload.statusUpdatedAt) || coerceDate(current.projectStatusUpdatedAt) || new Date();
+    const nextFinanceRemark = payload.financeRemark ?? current.projectFinanceRemark ?? null;
+    const nextFinanceUpdatedAt = coerceProjectDateTime(payload.financeUpdatedAt) || coerceDate(current.projectFinanceUpdatedAt) || new Date();
+    const nextDeadlineDate = payload.deadlineDate ? formatLocalDate(payload.deadlineDate) : formatLocalDate(current.endDate);
+
+    const setClauses = [];
+    const updateRequest = pool.request()
+      .input("projectId", sql.Int, Number(projectId));
+    if (actorEmpId) {
+      updateRequest.input("EmpID", sql.Int, actorEmpId);
+    }
+    updateRequest.input("projectStatus", sql.NVarChar(50), nextStatus);
+    setClauses.push("projectStatus = @projectStatus");
+    if (hasProjectPriority) {
+      updateRequest.input("projectPriority", sql.NVarChar(20), nextPriority);
+      setClauses.push("projectPriority = @projectPriority");
+    }
+    if (hasProjectStatusRemark) {
+      updateRequest.input("projectStatusRemark", sql.NVarChar(1000), nextStatusRemark);
+      setClauses.push("projectStatusRemark = @projectStatusRemark");
+    }
+    if (hasProjectStatusUpdatedAt) {
+      updateRequest.input("projectStatusUpdatedAt", sql.DateTime2, nextStatusUpdatedAt);
+      setClauses.push("projectStatusUpdatedAt = @projectStatusUpdatedAt");
+    }
+    if (hasProjectBudget) {
+      updateRequest.input("projectBudget", sql.Decimal(18, 2), nextBudget);
+      setClauses.push("projectBudget = @projectBudget");
+    }
+    if (hasProjectSpentAmount) {
+      updateRequest.input("projectSpentAmount", sql.Decimal(18, 2), nextSpent);
+      setClauses.push("projectSpentAmount = @projectSpentAmount");
+    }
+    if (hasProjectPendingAmount) {
+      updateRequest.input("projectPendingAmount", sql.Decimal(18, 2), nextPending);
+      setClauses.push("projectPendingAmount = @projectPendingAmount");
+    }
+    if (hasProjectRemainingAmount) {
+      updateRequest.input("projectRemainingAmount", sql.Decimal(18, 2), nextRemaining);
+      setClauses.push("projectRemainingAmount = @projectRemainingAmount");
+    }
+    if (hasProjectFinanceRemark) {
+      updateRequest.input("projectFinanceRemark", sql.NVarChar(1000), nextFinanceRemark);
+      setClauses.push("projectFinanceRemark = @projectFinanceRemark");
+    }
+    if (hasProjectFinanceUpdatedAt) {
+      updateRequest.input("projectFinanceUpdatedAt", sql.DateTime2, nextFinanceUpdatedAt);
+      setClauses.push("projectFinanceUpdatedAt = @projectFinanceUpdatedAt");
+    }
+    if (hasDeadlineDate && nextDeadlineDate) {
+      updateRequest.input("endDate", sql.Date, nextDeadlineDate);
+      setClauses.push("endDate = @endDate");
+    }
+
+    if (setClauses.length) {
+      await updateRequest.query(`
+        UPDATE dbo.employeeProject
+        SET ${setClauses.join(", ")}
+        WHERE projectId = @projectId
+        ${actorEmpId ? "AND EmpID = @EmpID" : ""}
+      `);
+    }
+
+    if (hasHistoryTable) {
+      await pool.request()
+        .input("projectId", sql.Int, Number(projectId))
+        .input("EmpID", sql.Int, Number(current.EmpID))
+        .input("projectStatus", sql.NVarChar(100), nextStatus)
+        .input("projectPriority", sql.NVarChar(20), nextPriority)
+        .input("projectStatusRemark", sql.NVarChar(1000), nextStatusRemark)
+        .input("projectStatusUpdatedAt", sql.DateTime2, nextStatusUpdatedAt)
+        .input("projectBudget", sql.Decimal(18, 2), nextBudget)
+        .input("projectSpentAmount", sql.Decimal(18, 2), nextSpent)
+        .input("projectPendingAmount", sql.Decimal(18, 2), nextPending)
+        .input("projectRemainingAmount", sql.Decimal(18, 2), nextRemaining)
+        .input("projectFinanceRemark", sql.NVarChar(1000), nextFinanceRemark)
+        .input("projectFinanceUpdatedAt", sql.DateTime2, nextFinanceUpdatedAt)
+        .query(`
+          INSERT INTO dbo.employeeProjectUpdateHistory (
+            projectId,
+            EmpID,
+            projectStatus,
+            ${hasHistoryPriority ? "projectPriority," : ""}
+            projectStatusRemark,
+            projectStatusUpdatedAt,
+            projectBudget,
+            projectSpentAmount,
+            projectPendingAmount,
+            projectRemainingAmount,
+            projectFinanceRemark,
+            projectFinanceUpdatedAt
+          )
+          VALUES (
+            @projectId,
+            @EmpID,
+            @projectStatus,
+            ${hasHistoryPriority ? "@projectPriority," : ""}
+            @projectStatusRemark,
+            @projectStatusUpdatedAt,
+            @projectBudget,
+            @projectSpentAmount,
+            @projectPendingAmount,
+            @projectRemainingAmount,
+            @projectFinanceRemark,
+            @projectFinanceUpdatedAt
+          )
+        `);
+    }
+
+    const bootstrap = await getBootstrap(actor);
+    return {
+      project: bootstrap.projects.find((item) => Number(item.id) === Number(projectId)) || null,
+      projectUpdates: bootstrap.projectUpdates.filter((item) => Number(item.projectId) === Number(projectId))
+    };
+  }
+
+  async function deleteProject(projectId, actor) {
+    if (!(await tableExists("employeeProject"))) {
+      throw new Error("employeeProject table is not available in the database.");
+    }
+
+    const actorEmpId = await getEffectiveEmpId(actor);
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    try {
+      if (await tableExists("employeeProjectUpdateHistory")) {
+        const historyRequest = new sql.Request(transaction).input("projectId", sql.Int, Number(projectId));
+        if (actorEmpId) {
+          historyRequest.input("EmpID", sql.Int, actorEmpId);
+        }
+        await historyRequest.query(`
+          DELETE FROM dbo.employeeProjectUpdateHistory
+          WHERE projectId = @projectId
+          ${actorEmpId ? "AND EmpID = @EmpID" : ""}
+        `);
+      }
+
+      const deleteRequest = new sql.Request(transaction).input("projectId", sql.Int, Number(projectId));
+      if (actorEmpId) {
+        deleteRequest.input("EmpID", sql.Int, actorEmpId);
+      }
+      const result = await deleteRequest.query(`
+        DELETE FROM dbo.employeeProject
+        OUTPUT deleted.projectId
+        WHERE projectId = @projectId
+        ${actorEmpId ? "AND EmpID = @EmpID" : ""}
+      `);
+
+      if (!result.recordset[0]) {
+        await transaction.rollback();
+        return false;
+      }
+
+      await transaction.commit();
+      return true;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 
   async function createSchedule(payload, actor) {
@@ -1018,68 +1350,19 @@ function createSqlServerStore() {
       throw new Error("No employee is available for schedule creation.");
     }
 
-    if (await hasUnifiedEmployeeCalendar()) {
-      const pool = await getPool();
-      const scheduleDate = buildScheduleDate(payload.range, payload.day);
-      const result = await pool.request()
-        .input("EmpID", sql.Int, empId)
-        .input("entryType", sql.NVarChar(40), `${payload.range[0].toUpperCase()}${payload.range.slice(1)}`)
-        .input("title", sql.NVarChar(200), payload.title)
-        .input("description", sql.NVarChar(sql.MAX), buildScheduleMetadata(payload))
-        .input("startDateTime", sql.DateTime2, scheduleDate)
-        .input("endDateTime", sql.DateTime2, scheduleDate)
-        .query(`
-          INSERT INTO dbo.employeeCalendar (
-            EmpID,
-            entryCategory,
-            entryType,
-            title,
-            description,
-            startDateTime,
-            endDateTime,
-            isAllDay,
-            leaveDays,
-            entryStatus,
-            referenceTable
-          )
-          OUTPUT inserted.calendarId
-          VALUES (
-            @EmpID,
-            N'GENERAL',
-            @entryType,
-            @title,
-            @description,
-            @startDateTime,
-            @endDateTime,
-            1,
-            0,
-            N'ACTIVE',
-            N'employeeCalendar:schedule'
-          )
-        `);
-
-      return {
-        id: Number(result.recordset[0].calendarId),
-        range: payload.range,
-        day: payload.day,
-        title: payload.title,
-        note: payload.note,
-        color: payload.color
-      };
-    }
-
     if (!(await tableExists("employeeSchedule"))) {
       throw new Error("employeeSchedule table is not available in the database.");
     }
 
-    const scheduleTypeId = await getLookupId("scheduleType", "scheduleTypeId", "scheduleType", `${payload.range[0].toUpperCase()}${payload.range.slice(1)}`);
+    const scheduleTypeId = await getLookupId("scheduleType", "scheduleTypeId", "scheduleType", "Daily");
+    const scheduleDate = payload.scheduleDate || payload.day;
     const pool = await getPool();
     const result = await pool.request()
       .input("EmpID", sql.Int, empId)
       .input("scheduleTypeId", sql.Int, scheduleTypeId)
       .input("scheduleTitle", sql.NVarChar(200), payload.title)
       .input("scheduleNote", sql.NVarChar(500), payload.note)
-      .input("scheduleDay", sql.NVarChar(20), payload.day)
+      .input("scheduleDay", sql.NVarChar(20), scheduleDate)
       .query(`
         INSERT INTO dbo.employeeSchedule (
           EmpID,
@@ -1100,8 +1383,9 @@ function createSqlServerStore() {
 
     return {
       id: Number(result.recordset[0].scheduleId),
-      range: payload.range,
-      day: payload.day,
+      range: "daily",
+      day: scheduleDate,
+      scheduleDate,
       title: payload.title,
       note: payload.note,
       color: payload.color
@@ -1110,70 +1394,18 @@ function createSqlServerStore() {
 
   async function updateSchedule(id, payload, actor) {
     const empId = await getActorEmpId(actor);
-    if (await hasUnifiedEmployeeCalendar()) {
-      const pool = await getPool();
-      const metadata = buildScheduleMetadata({
-        range: payload.range || "weekly",
-        day: payload.day || "",
-        note: payload.note || "",
-        color: payload.color || "#2563eb"
-      });
-      const scheduleDate = buildScheduleDate(payload.range || "weekly", payload.day || "Mon");
-      const request = pool.request()
-        .input("calendarId", sql.Int, Number(id))
-        .input("entryType", sql.NVarChar(40), payload.range ? `${payload.range[0].toUpperCase()}${payload.range.slice(1)}` : null)
-        .input("title", sql.NVarChar(200), payload.title ?? null)
-        .input("description", sql.NVarChar(sql.MAX), metadata)
-        .input("startDateTime", sql.DateTime2, scheduleDate)
-        .input("endDateTime", sql.DateTime2, scheduleDate);
-      if (empId) {
-        request.input("EmpID", sql.Int, empId);
-      }
-
-      const result = await request.query(`
-        UPDATE dbo.employeeCalendar
-        SET
-          entryType = COALESCE(@entryType, entryType),
-          title = COALESCE(@title, title),
-          description = COALESCE(@description, description),
-          startDateTime = COALESCE(@startDateTime, startDateTime),
-          endDateTime = COALESCE(@endDateTime, endDateTime)
-        OUTPUT inserted.calendarId, inserted.entryType, inserted.title, inserted.description, inserted.startDateTime
-        WHERE calendarId = @calendarId
-          AND referenceTable = N'employeeCalendar:schedule'
-          ${empId ? "AND EmpID = @EmpID" : ""}
-      `);
-
-      const row = result.recordset[0];
-      if (!row) {
-        return null;
-      }
-      const parsed = parseScheduleMetadata(row.description) || {};
-      const range = parsed.range || inferRangeFromEntryType(row.entryType);
-      return {
-        id: Number(row.calendarId),
-        range,
-        day: parsed.day || inferScheduleDay(row.startDateTime, range),
-        title: row.title,
-        note: parsed.note || "",
-        color: parsed.color || "#2563eb"
-      };
-    }
-
     if (!(await tableExists("employeeSchedule"))) {
       return null;
     }
 
-    const scheduleTypeId = payload.range
-      ? await getLookupId("scheduleType", "scheduleTypeId", "scheduleType", `${payload.range[0].toUpperCase()}${payload.range.slice(1)}`)
-      : null;
+    const scheduleTypeId = await getLookupId("scheduleType", "scheduleTypeId", "scheduleType", "Daily");
     const pool = await getPool();
     const request = pool.request()
       .input("scheduleId", sql.Int, Number(id))
       .input("scheduleTypeId", sql.Int, scheduleTypeId)
       .input("scheduleTitle", sql.NVarChar(200), payload.title ?? null)
       .input("scheduleNote", sql.NVarChar(500), payload.note ?? null)
-      .input("scheduleDay", sql.NVarChar(20), payload.day ?? null);
+      .input("scheduleDay", sql.NVarChar(20), payload.scheduleDate ?? payload.day ?? null);
     if (empId) {
       request.input("EmpID", sql.Int, empId);
     }
@@ -1197,8 +1429,9 @@ function createSqlServerStore() {
 
     return {
       id: Number(row.scheduleId),
-      range: payload.range || "weekly",
+      range: "daily",
       day: row.scheduleDay || "",
+      scheduleDate: row.scheduleDay || "",
       title: row.scheduleTitle,
       note: row.scheduleNote || "",
       color: payload.color || "#2563eb"
@@ -1207,24 +1440,6 @@ function createSqlServerStore() {
 
   async function deleteSchedule(id, actor) {
     const empId = await getActorEmpId(actor);
-    if (await hasUnifiedEmployeeCalendar()) {
-      const pool = await getPool();
-      const request = pool.request().input("calendarId", sql.Int, Number(id));
-      if (empId) {
-        request.input("EmpID", sql.Int, empId);
-      }
-
-      const result = await request.query(`
-        DELETE FROM dbo.employeeCalendar
-        OUTPUT deleted.calendarId
-        WHERE calendarId = @calendarId
-          AND referenceTable = N'employeeCalendar:schedule'
-          ${empId ? "AND EmpID = @EmpID" : ""}
-      `);
-
-      return Boolean(result.recordset[0]);
-    }
-
     if (!(await tableExists("employeeSchedule"))) {
       return false;
     }
@@ -1738,6 +1953,8 @@ function createSqlServerStore() {
     validateLogin,
     createUser,
     createProject,
+    updateProject,
+    deleteProject,
     createSchedule,
     updateSchedule,
     deleteSchedule,

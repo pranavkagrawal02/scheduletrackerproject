@@ -113,6 +113,7 @@ const state = {
   currentRange: "weekly",
   currentView: "dashboard",
   currentWorkspaceTabId: null,
+  selectedCalendarDate: null,
   selectedMeetingId: null,
   editingMeetingId: null,
   editingScheduleId: null,
@@ -125,6 +126,7 @@ const state = {
   todos: [],
   users: [],
   projects: [],
+  projectUpdates: [],
   schedules: [],
   finances: [],
   authUser: null,
@@ -152,12 +154,27 @@ const workspaceDefinitions = {
   projects: {
     base: {
       id: "projects-home",
-      label: "Projects"
+      label: "All Projects"
     },
     options: [
-      { id: "project-finance", label: "Finance view", title: "Project finance workspace", text: "Open a dedicated finance-focused project tab with budgets, expenses, and approvals." },
-      { id: "project-risk", label: "Risk register", title: "Project risk register", text: "Track risk logs, owners, mitigation plans, and delivery escalations in a future tab." },
-      { id: "project-files", label: "Project files", title: "Project files", text: "Keep room for project documents, references, and attachments in a future workspace tab." }
+      {
+        id: "projects-finance",
+        label: "All Project Finance",
+        title: "All Project Finance",
+        text: "See the full finance position across every project."
+      },
+      {
+        id: "projects-new",
+        label: "New Project",
+        title: "New Project",
+        text: "Create a new project and assign it to an employee."
+      },
+      {
+        id: "projects-remove",
+        label: "Remove Project",
+        title: "Remove Project",
+        text: "Remove an existing project from the database."
+      }
     ]
   }
 };
@@ -180,6 +197,16 @@ const leaveCalendarMeta = document.getElementById("leaveCalendarMeta");
 const leaveCalendarBoard = document.getElementById("leaveCalendarBoard");
 const leaveCalendarPrevBtn = document.getElementById("leaveCalendarPrevBtn");
 const leaveCalendarNextBtn = document.getElementById("leaveCalendarNextBtn");
+const calendarPlannerTitle = document.getElementById("calendarPlannerTitle");
+const calendarPlannerMeta = document.getElementById("calendarPlannerMeta");
+const calendarProjectDeadlineList = document.getElementById("calendarProjectDeadlineList");
+const calendarScheduleList = document.getElementById("calendarScheduleList");
+const calendarScheduleForm = document.getElementById("calendarScheduleForm");
+const calendarScheduleTitleInput = document.getElementById("calendarScheduleTitleInput");
+const calendarScheduleColorInput = document.getElementById("calendarScheduleColorInput");
+const calendarScheduleNoteInput = document.getElementById("calendarScheduleNoteInput");
+const calendarScheduleSubmitBtn = document.getElementById("calendarScheduleSubmitBtn");
+const calendarScheduleCancelBtn = document.getElementById("calendarScheduleCancelBtn");
 const holidayMonthSummary = document.getElementById("holidayMonthSummary");
 const holidayClSummary = document.getElementById("holidayClSummary");
 const holidayPlSummary = document.getElementById("holidayPlSummary");
@@ -199,12 +226,11 @@ const heroProjectList = document.getElementById("heroProjectList");
 const organizationTree = document.getElementById("organizationTree");
 const workspaceTabs = document.getElementById("workspaceTabs");
 const workspaceTabList = document.getElementById("workspaceTabList");
-const workspaceAddBtn = document.getElementById("workspaceAddBtn");
-const workspaceMenu = document.getElementById("workspaceMenu");
 const workspacePlaceholder = document.getElementById("workspacePlaceholder");
 const workspacePlaceholderKicker = document.getElementById("workspacePlaceholderKicker");
 const workspacePlaceholderTitle = document.getElementById("workspacePlaceholderTitle");
 const workspacePlaceholderText = document.getElementById("workspacePlaceholderText");
+const workspacePanelBody = document.getElementById("workspacePanelBody");
 const scheduleForm = document.getElementById("scheduleForm");
 const scheduleRangeInput = document.getElementById("scheduleRangeInput");
 const scheduleDayInput = document.getElementById("scheduleDayInput");
@@ -269,6 +295,12 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function renderSessionIdentity() {
+  const displayName = state.authUser?.name || state.authUser?.username || "User";
+  currentUserLabel.textContent = displayName;
+  welcomeTitle.textContent = `Welcome, ${displayName}`;
+}
+
 function getSessionUser() {
   try {
     return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
@@ -310,6 +342,55 @@ function statusClass(status) {
 
 function formatMoney(amount) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(amount || 0));
+}
+
+function formatProjectStamp(value) {
+  return value ? String(value) : "Not updated yet";
+}
+
+const PROJECT_STATUS_OPTIONS = ["Assign", "In Progress", "Completed", "At Risk", "Off Track", "On Track"];
+const PROJECT_PRIORITY_OPTIONS = ["Low", "Medium", "High", "Urgent"];
+
+function buildProjectStatusOptions(selectedValue) {
+  return PROJECT_STATUS_OPTIONS.map((status) => `<option value="${status}" ${selectedValue === status ? "selected" : ""}>${status}</option>`).join("");
+}
+
+function buildProjectPriorityOptions(selectedValue) {
+  return PROJECT_PRIORITY_OPTIONS.map((priority) => `<option value="${priority}" ${selectedValue === priority ? "selected" : ""}>${priority}</option>`).join("");
+}
+
+function toInputDateValue(value) {
+  if (!value) return "";
+  const text = String(value);
+  const match = text.match(/\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : "";
+}
+
+function padNumber(value) {
+  return String(value).padStart(2, "0");
+}
+
+function coerceDate(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatLocalDate(value) {
+  const date = coerceDate(value);
+  if (!date) return "";
+  return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+}
+
+function formatLocalTime(value) {
+  const date = coerceDate(value);
+  if (date) {
+    return `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
+  }
+  const text = String(value || "");
+  const match = text.match(/(\d{2}:\d{2})/);
+  return match ? match[1] : "";
 }
 
 function formatMonthLabel(date) {
@@ -551,6 +632,50 @@ function getWorkspaceDefinition(view) {
   return workspaceDefinitions[view] || null;
 }
 
+function getWorkspaceOptions(view) {
+  if (view === "projects") {
+    return [
+      ...(getWorkspaceDefinition(view)?.options || []),
+      ...state.projects.map((project) => ({
+        id: `project-tab-${project.id}`,
+        label: project.name,
+        title: project.name,
+        text: "Project workspace"
+      }))
+    ];
+  }
+  return getWorkspaceDefinition(view)?.options || [];
+}
+
+function getProjectTabId(projectId) {
+  return `project-tab-${projectId}`;
+}
+
+function parseProjectTabId(tabId) {
+  if (!String(tabId || "").startsWith("project-tab-")) {
+    return null;
+  }
+  return Number(String(tabId).slice("project-tab-".length));
+}
+
+function getWorkspaceTabMeta(view, tabId) {
+  const definition = getWorkspaceDefinition(view);
+  if (!definition) {
+    return null;
+  }
+
+  if (tabId === definition.base.id) {
+    return {
+      id: definition.base.id,
+      label: definition.base.label,
+      title: definition.base.label,
+      text: ""
+    };
+  }
+
+  return getWorkspaceOptions(view).find((item) => item.id === tabId) || null;
+}
+
 function ensureWorkspaceState(view) {
   const definition = getWorkspaceDefinition(view);
   if (!definition) {
@@ -558,8 +683,13 @@ function ensureWorkspaceState(view) {
     return;
   }
 
-  const openTabs = state.openWorkspaceTabs[view];
-  if (!openTabs.includes(definition.base.id)) {
+  const validTabIds = new Set([definition.base.id, ...getWorkspaceOptions(view).map((item) => item.id)]);
+  const openTabs = state.openWorkspaceTabs[view].filter((tabId) => validTabIds.has(tabId));
+  state.openWorkspaceTabs[view] = openTabs;
+  if (view === "projects") {
+    const fixedProjectTabs = [definition.base.id, ...(definition.options || []).map((item) => item.id)];
+    state.openWorkspaceTabs[view] = [...new Set([...fixedProjectTabs, ...openTabs])];
+  } else if (!openTabs.includes(definition.base.id)) {
     openTabs.unshift(definition.base.id);
   }
 
@@ -574,7 +704,8 @@ function isWorkspaceBaseTabActive() {
 }
 
 function syncViewPanels() {
-  const showDefaultPanels = state.currentView === "dashboard" || isWorkspaceBaseTabActive();
+  const showDefaultPanels = state.currentView === "dashboard"
+    || (state.currentView !== "projects" && isWorkspaceBaseTabActive());
   viewPanels.forEach((panel) => {
     const views = (panel.dataset.section || "").split(" ");
     const inView = views.includes(state.currentView);
@@ -582,25 +713,439 @@ function syncViewPanels() {
   });
 }
 
+function computeProjectFinanceSummary(projectId) {
+  const project = state.projects.find((item) => Number(item.id) === Number(projectId));
+  const items = state.finances.filter((finance) => Number(finance.projectId) === Number(projectId));
+  const budgetFromFinances = items
+    .filter((finance) => finance.type === "Budget" || finance.type === "Grant")
+    .reduce((sum, finance) => sum + Number(finance.amount || 0), 0);
+  const spentFromFinances = items
+    .filter((finance) => finance.type === "Expense" || finance.type === "Payment")
+    .reduce((sum, finance) => sum + Number(finance.amount || 0), 0);
+  const pendingFromFinances = items
+    .filter((finance) => finance.status === "Pending" || finance.status === "Planned")
+    .reduce((sum, finance) => sum + Number(finance.amount || 0), 0);
+  const budget = Number(project?.budget || 0) || budgetFromFinances;
+  const spent = Number(project?.spentAmount || 0) || spentFromFinances;
+  const pending = Number(project?.pendingAmount || 0) || pendingFromFinances;
+  const remaining = Number(project?.remainingAmount || 0) || (budget - spent);
+
+  return {
+    budget,
+    spent,
+    pending,
+    remaining,
+    count: items.length,
+    items
+  };
+}
+
+function renderProjectWorkspacePanel() {
+  const activeTabId = state.currentWorkspaceTabId;
+  const usersById = Object.fromEntries(state.users.map((user) => [Number(user.id), user]));
+  const openTabs = state.openWorkspaceTabs.projects || [];
+  const availableProjects = state.projects.filter((project) => !openTabs.includes(getProjectTabId(project.id)));
+  const projectRail = `
+    <aside class="workspace-project-sidebar">
+      <p class="panel-kicker">Projects</p>
+      <div class="workspace-project-tabstack">
+        ${availableProjects.length
+          ? availableProjects.map((project) => `<button class="workspace-project-pill" type="button" data-open-project-tab="${project.id}">${escapeHtml(project.name)}</button>`).join("")
+          : `<article class="workspace-empty-state workspace-empty-state-compact"><h3>All projects opened</h3><p>Select a tab above or close one to place it back here.</p></article>`}
+      </div>
+    </aside>
+  `;
+
+  workspacePlaceholder.classList.remove("hidden");
+  workspacePlaceholderKicker.textContent = "Projects workspace";
+
+  if (activeTabId === "projects-home") {
+    workspacePlaceholderTitle.textContent = "All Projects";
+    workspacePlaceholderText.textContent = "Overview of every project handled in your workspace.";
+
+    const projectCards = state.projects.length
+      ? state.projects.map((project) => {
+        const summary = computeProjectFinanceSummary(project.id);
+        const owner = usersById[Number(project.ownerId)]?.name || "Unassigned";
+        return `
+          <article class="workspace-project-card">
+            <div class="workspace-project-card-top">
+              <div>
+                <h3>${escapeHtml(project.name)}</h3>
+                <p>Owner: ${escapeHtml(owner)} | Priority: ${escapeHtml(project.priority || "Medium")}</p>
+              </div>
+              <span class="record-tag ${statusClass(project.status)}">${escapeHtml(project.status)}</span>
+            </div>
+            <div class="workspace-stat-grid">
+              <article class="workspace-stat-card"><span>Budget</span><strong>${formatMoney(summary.budget)}</strong></article>
+              <article class="workspace-stat-card"><span>Spent</span><strong>${formatMoney(summary.spent)}</strong></article>
+              <article class="workspace-stat-card"><span>Remaining</span><strong>${formatMoney(summary.remaining)}</strong></article>
+              <article class="workspace-stat-card"><span>Records</span><strong>${summary.count}</strong></article>
+            </div>
+            <div class="workspace-card-meta">
+              <p><strong>Status remark:</strong> ${escapeHtml(project.statusRemark || "No status remark yet.")}</p>
+              <p><strong>Status updated:</strong> ${escapeHtml(formatProjectStamp(project.statusUpdatedAt))}</p>
+            </div>
+          </article>
+        `;
+      }).join("")
+      : `<article class="workspace-empty-state"><h3>No projects added yet</h3><p>Create a project entry to see the workspace overview here.</p></article>`;
+
+    workspacePanelBody.innerHTML = `
+      <div class="workspace-project-shell">
+        <div class="workspace-project-main">
+          <div class="workspace-project-list">${projectCards}</div>
+        </div>
+        ${projectRail}
+      </div>
+    `;
+    return;
+  }
+
+  if (activeTabId === "projects-finance") {
+    workspacePlaceholderTitle.textContent = "All Project Finance";
+    workspacePlaceholderText.textContent = "Compare budget, spent amount, pending flow, and remaining balance across all projects.";
+
+    const financeRows = state.projects.length
+      ? state.projects.map((project) => {
+        const summary = computeProjectFinanceSummary(project.id);
+        return `
+          <article class="workspace-finance-row">
+            <div>
+              <h3>${escapeHtml(project.name)}</h3>
+              <p>${escapeHtml(project.status)} project | ${escapeHtml(project.financeRemark || "No finance remark yet.")}</p>
+            </div>
+            <strong>${formatMoney(summary.remaining)}</strong>
+            <span>${formatMoney(summary.budget)}</span>
+            <span>${formatMoney(summary.spent)}</span>
+            <span>${formatMoney(summary.pending)}</span>
+          </article>
+        `;
+      }).join("")
+      : `<article class="workspace-empty-state"><h3>No finance data yet</h3><p>Add project and finance records to see the complete financial condition here.</p></article>`;
+
+    const totals = state.projects.reduce((acc, project) => {
+      const summary = computeProjectFinanceSummary(project.id);
+      acc.budget += summary.budget;
+      acc.spent += summary.spent;
+      acc.pending += summary.pending;
+      acc.remaining += summary.remaining;
+      return acc;
+    }, { budget: 0, spent: 0, pending: 0, remaining: 0 });
+
+    workspacePanelBody.innerHTML = `
+      <div class="workspace-project-shell">
+        <div class="workspace-project-main">
+          <div class="workspace-stat-grid workspace-stat-grid-wide">
+            <article class="workspace-stat-card"><span>Total budget</span><strong>${formatMoney(totals.budget)}</strong></article>
+            <article class="workspace-stat-card"><span>Total spent</span><strong>${formatMoney(totals.spent)}</strong></article>
+            <article class="workspace-stat-card"><span>Total pending</span><strong>${formatMoney(totals.pending)}</strong></article>
+            <article class="workspace-stat-card"><span>Total remaining</span><strong>${formatMoney(totals.remaining)}</strong></article>
+          </div>
+          <div class="workspace-finance-table">
+            <div class="workspace-finance-head">
+              <span>Project</span>
+              <span>Remaining</span>
+              <span>Budget</span>
+              <span>Spent</span>
+              <span>Pending</span>
+            </div>
+            ${financeRows}
+          </div>
+        </div>
+        ${projectRail}
+      </div>
+    `;
+    return;
+  }
+
+  if (activeTabId === "projects-new") {
+    workspacePlaceholderTitle.textContent = "New Project";
+    workspacePlaceholderText.textContent = "Create a new project and assign it to an employee.";
+    const ownerOptions = state.users.length
+      ? state.users.map((user) => `<option value="${user.id}">${escapeHtml(user.name)}</option>`).join("")
+      : `<option value="">No users available</option>`;
+    workspacePanelBody.innerHTML = `
+      <div class="workspace-project-shell">
+        <div class="workspace-project-main">
+          <article class="workspace-edit-card workspace-edit-card-finance">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">New project</p>
+                <h2>Create project</h2>
+              </div>
+            </div>
+            <form class="stack-form workspace-inline-form" data-create-project-form="true">
+              <label class="form-field">
+                <span>Project name</span>
+                <input type="text" name="name" maxlength="120" placeholder="Enter project name">
+              </label>
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>Assigned employee</span>
+                  <select name="ownerId">${ownerOptions}</select>
+                </label>
+                <label class="form-field">
+                  <span>Project status</span>
+                  <select name="status">${buildProjectStatusOptions("Assign")}</select>
+                </label>
+              </div>
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>Priority</span>
+                  <select name="priority">${buildProjectPriorityOptions("Medium")}</select>
+                </label>
+              </div>
+              <button type="submit">Create new project</button>
+            </form>
+          </article>
+        </div>
+        ${projectRail}
+      </div>
+    `;
+    return;
+  }
+
+  if (activeTabId === "projects-remove") {
+    workspacePlaceholderTitle.textContent = "Remove Project";
+    workspacePlaceholderText.textContent = "Choose a project to remove it from the database.";
+    const removableProjects = state.projects.length
+      ? state.projects.map((project) => `
+        <article class="workspace-remove-card">
+          <div>
+            <h3>${escapeHtml(project.name)}</h3>
+            <p>${escapeHtml(project.status)} | ${escapeHtml(project.deadlineDate || "No deadline")}</p>
+          </div>
+          <button class="danger-btn" type="button" data-remove-project="${project.id}">Remove project</button>
+        </article>
+      `).join("")
+      : `<article class="workspace-empty-state"><h3>No projects found</h3><p>There are no projects to remove.</p></article>`;
+    workspacePanelBody.innerHTML = `
+      <div class="workspace-project-shell">
+        <div class="workspace-project-main">
+          <div class="workspace-remove-list">${removableProjects}</div>
+        </div>
+        ${projectRail}
+      </div>
+    `;
+    return;
+  }
+
+  const projectId = parseProjectTabId(activeTabId);
+  const project = state.projects.find((item) => Number(item.id) === projectId);
+  if (!project) {
+    workspacePlaceholderTitle.textContent = "Project";
+    workspacePlaceholderText.textContent = "This project is not available anymore.";
+    workspacePanelBody.innerHTML = `
+      <div class="workspace-project-shell">
+        <div class="workspace-project-main"></div>
+        ${projectRail}
+      </div>
+    `;
+    return;
+  }
+
+  const owner = usersById[Number(project.ownerId)]?.name || "Unassigned";
+  const summary = computeProjectFinanceSummary(project.id);
+  const projectUpdates = state.projectUpdates
+    .filter((item) => Number(item.projectId) === Number(project.id))
+    .sort((a, b) => String(b.statusUpdatedAt || b.createdAt || "").localeCompare(String(a.statusUpdatedAt || a.createdAt || "")));
+  const financeCards = summary.items.length
+    ? summary.items.map((finance) => `
+      <article class="workspace-finance-record">
+        <div>
+          <h3>${escapeHtml(finance.type)}</h3>
+          <p>${escapeHtml(finance.status)}${finance.note ? ` | ${escapeHtml(finance.note)}` : ""}</p>
+        </div>
+        <strong>${formatMoney(finance.amount)}</strong>
+      </article>
+    `).join("")
+    : `<article class="workspace-empty-state"><h3>No finance records</h3><p>This project does not have finance entries yet.</p></article>`;
+  const updateTimeline = projectUpdates.length
+    ? projectUpdates.map((update) => `
+      <article class="workspace-update-card">
+        <div class="workspace-update-head">
+          <div>
+            <h3>${escapeHtml(update.status)}</h3>
+            <p>${escapeHtml(formatProjectStamp(update.statusUpdatedAt || update.createdAt))}</p>
+          </div>
+          <span class="record-tag ${statusClass(update.status)}">${escapeHtml(update.status)}</span>
+        </div>
+        <div class="workspace-stat-grid workspace-update-stats">
+          <article class="workspace-stat-card"><span>Budget</span><strong>${formatMoney(update.budget)}</strong></article>
+          <article class="workspace-stat-card"><span>Spent</span><strong>${formatMoney(update.spentAmount)}</strong></article>
+          <article class="workspace-stat-card"><span>Pending</span><strong>${formatMoney(update.pendingAmount)}</strong></article>
+          <article class="workspace-stat-card"><span>Remaining</span><strong>${formatMoney(update.remainingAmount)}</strong></article>
+        </div>
+        <div class="workspace-card-meta">
+          <p><strong>Status remark:</strong> ${escapeHtml(update.statusRemark || "No status remark.")}</p>
+          <p><strong>Priority:</strong> ${escapeHtml(update.priority || "Medium")}</p>
+          <p><strong>Finance remark:</strong> ${escapeHtml(update.financeRemark || "No finance remark.")}</p>
+          <p><strong>Finance updated:</strong> ${escapeHtml(formatProjectStamp(update.financeUpdatedAt))}</p>
+        </div>
+      </article>
+    `).join("")
+    : `<article class="workspace-empty-state"><h3>No update history</h3><p>Add rows to <code>employeeProjectUpdateHistory</code> to show the project timeline here.</p></article>`;
+  const projectStatusFormId = `projectStatusForm-${project.id}`;
+  const projectFinanceFormId = `projectFinanceForm-${project.id}`;
+  const projectExpenseFormId = `projectExpenseForm-${project.id}`;
+
+  workspacePlaceholderTitle.textContent = project.name;
+  workspacePlaceholderText.textContent = `Focused view for ${project.name}.`;
+  workspacePanelBody.innerHTML = `
+    <div class="workspace-project-shell">
+      <div class="workspace-project-main">
+        <div class="workspace-project-hero">
+          <div>
+            <p class="workspace-project-label">Owner</p>
+            <h3>${escapeHtml(owner)}</h3>
+          </div>
+          <div>
+            <p class="workspace-project-label">Status</p>
+            <h3>${escapeHtml(project.status)}</h3>
+          </div>
+        </div>
+        <div class="workspace-stat-grid workspace-stat-grid-wide">
+          <article class="workspace-stat-card"><span>Budget</span><strong>${formatMoney(summary.budget)}</strong></article>
+          <article class="workspace-stat-card"><span>Spent</span><strong>${formatMoney(summary.spent)}</strong></article>
+          <article class="workspace-stat-card"><span>Pending</span><strong>${formatMoney(summary.pending)}</strong></article>
+          <article class="workspace-stat-card"><span>Remaining</span><strong>${formatMoney(summary.remaining)}</strong></article>
+        </div>
+        <div class="workspace-card-meta workspace-card-meta-wide">
+          <p><strong>Status remark:</strong> ${escapeHtml(project.statusRemark || "No status remark yet.")}</p>
+          <p><strong>Status updated:</strong> ${escapeHtml(formatProjectStamp(project.statusUpdatedAt))}</p>
+          <p><strong>Priority:</strong> ${escapeHtml(project.priority || "Medium")}</p>
+          <p><strong>Finance remark:</strong> ${escapeHtml(project.financeRemark || "No finance remark yet.")}</p>
+          <p><strong>Finance updated:</strong> ${escapeHtml(formatProjectStamp(project.financeUpdatedAt))}</p>
+          <p><strong>Deadline date:</strong> ${escapeHtml(project.deadlineDate || "Not set")}</p>
+        </div>
+        <div class="workspace-finance-records">${financeCards}</div>
+        <section class="workspace-edit-grid">
+          <article class="workspace-edit-card workspace-edit-card-finance">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Project finance</p>
+                <h2>Update budget and finance</h2>
+              </div>
+            </div>
+            <form class="stack-form workspace-inline-form" id="${projectFinanceFormId}" data-project-finance-form="${project.id}">
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>Project budget</span>
+                  <input type="number" name="budget" min="0" step="0.01" placeholder="Enter total budget" value="${Number(project.budget || 0)}">
+                </label>
+                <label class="form-field">
+                  <span>Pending finance amount</span>
+                  <input type="number" name="pendingAmount" min="0" step="0.01" placeholder="Enter pending amount" value="${Number(project.pendingAmount || 0)}">
+                </label>
+              </div>
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>Remaining balance</span>
+                  <input type="number" name="remainingAmount" min="0" step="0.01" placeholder="Enter remaining balance" value="${Number(project.remainingAmount || 0)}">
+                </label>
+                <label class="form-field">
+                  <span>Project deadline date</span>
+                  <input type="date" name="deadlineDate" value="${escapeHtml(toInputDateValue(project.deadlineDate))}">
+                </label>
+              </div>
+              <label class="form-field">
+                <span>Finance remark</span>
+                <input type="text" name="financeRemark" maxlength="300" placeholder="Write finance update remark" value="${escapeHtml(project.financeRemark || "")}">
+              </label>
+              <button type="submit">Save finance update</button>
+            </form>
+          </article>
+          <article class="workspace-edit-card workspace-edit-card-expense">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Expenses and savings</p>
+                <h2>Add new expense or saving</h2>
+              </div>
+            </div>
+            <form class="stack-form workspace-inline-form" id="${projectExpenseFormId}" data-project-expense-form="${project.id}">
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>New expense amount</span>
+                  <input type="number" name="expenseDelta" min="0" step="0.01" placeholder="Enter new expense">
+                </label>
+                <label class="form-field">
+                  <span>New saving amount</span>
+                  <input type="number" name="savingsDelta" min="0" step="0.01" placeholder="Enter new saving">
+                </label>
+              </div>
+              <label class="form-field">
+                <span>Expense or saving remark</span>
+                <input type="text" name="financeRemark" maxlength="300" placeholder="Write what changed in expense or saving">
+              </label>
+              <button type="submit">Add expense / saving</button>
+            </form>
+          </article>
+          <article class="workspace-edit-card workspace-edit-card-status">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Project status</p>
+                <h2>Add new status and remark</h2>
+              </div>
+            </div>
+            <form class="stack-form workspace-inline-form" id="${projectStatusFormId}" data-project-status-form="${project.id}">
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>Project status</span>
+                  <select name="status">${buildProjectStatusOptions(project.status)}</select>
+                </label>
+                <label class="form-field">
+                  <span>Priority</span>
+                  <select name="priority">${buildProjectPriorityOptions(project.priority || "Medium")}</select>
+                </label>
+              </div>
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>Project deadline date</span>
+                  <input type="date" name="deadlineDate" value="${escapeHtml(toInputDateValue(project.deadlineDate))}">
+                </label>
+              </div>
+              <label class="form-field">
+                <span>Project status remark</span>
+                <input type="text" name="statusRemark" maxlength="300" placeholder="Write latest project status remark" value="${escapeHtml(project.statusRemark || "")}">
+              </label>
+              <button type="submit">Save status update</button>
+            </form>
+          </article>
+        </section>
+        <section class="workspace-update-history">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Project update history</p>
+              <h2>Latest updates</h2>
+            </div>
+            <p class="muted">Timeline from the SQL history table for this project.</p>
+          </div>
+          <div class="workspace-update-list">${updateTimeline}</div>
+        </section>
+      </div>
+      ${projectRail}
+    </div>
+  `;
+}
+
 function renderWorkspaceTabs() {
   const definition = getWorkspaceDefinition(state.currentView);
   if (!definition) {
     workspaceTabs.classList.add("hidden");
-    workspaceMenu.classList.add("hidden");
-    workspaceAddBtn.setAttribute("aria-expanded", "false");
     workspaceTabList.innerHTML = "";
     workspacePlaceholder.classList.add("hidden");
+    workspacePanelBody.innerHTML = "";
     syncViewPanels();
     return;
   }
 
   ensureWorkspaceState(state.currentView);
   const openTabs = state.openWorkspaceTabs[state.currentView];
+  const options = getWorkspaceOptions(state.currentView);
   workspaceTabs.classList.remove("hidden");
-  workspaceMenu.classList.add("hidden");
-  workspaceAddBtn.setAttribute("aria-expanded", "false");
   workspaceTabList.innerHTML = openTabs.map((tabId) => {
-    const option = definition.options.find((item) => item.id === tabId);
+    const option = options.find((item) => item.id === tabId);
     const isBase = tabId === definition.base.id;
     if (isBase) {
       return `<button class="workspace-tab ${state.currentWorkspaceTabId === tabId ? "active" : ""}" type="button" data-workspace-tab="${tabId}">${escapeHtml(definition.base.label)}</button>`;
@@ -608,20 +1153,21 @@ function renderWorkspaceTabs() {
     if (!option) {
       return "";
     }
-    return `<button class="workspace-tab ${state.currentWorkspaceTabId === tabId ? "active" : ""}" type="button" data-workspace-tab="${tabId}">${escapeHtml(option.label)}<span class="workspace-tab-close" data-close-workspace-tab="${tabId}" aria-label="Close ${escapeHtml(option.label)} tab">x</span></button>`;
+    const isFixedProjectTab = state.currentView === "projects" && (definition.options || []).some((item) => item.id === tabId);
+    const closeMarkup = isFixedProjectTab ? "" : `<span class="workspace-tab-close" data-close-workspace-tab="${tabId}" aria-label="Close ${escapeHtml(option.label)} tab">x</span>`;
+    return `<button class="workspace-tab ${state.currentWorkspaceTabId === tabId ? "active" : ""}" type="button" data-workspace-tab="${tabId}">${escapeHtml(option.label)}${closeMarkup}</button>`;
   }).join("");
 
-  const remainingOptions = definition.options.filter((option) => !openTabs.includes(option.id));
-  workspaceMenu.innerHTML = remainingOptions.length
-    ? remainingOptions.map((option) => `<button type="button" data-open-workspace-tab="${option.id}">${escapeHtml(option.label)}</button>`).join("")
-    : `<button type="button" disabled>All ${escapeHtml(definition.base.label.toLowerCase())} tabs are open</button>`;
-
-  if (isWorkspaceBaseTabActive()) {
+  if (state.currentView === "projects") {
+    renderProjectWorkspacePanel();
+  } else if (isWorkspaceBaseTabActive()) {
     workspacePlaceholder.classList.add("hidden");
+    workspacePanelBody.innerHTML = "";
   } else {
-    const activeOption = definition.options.find((item) => item.id === state.currentWorkspaceTabId);
+    const activeOption = options.find((item) => item.id === state.currentWorkspaceTabId);
     if (!activeOption) {
       workspacePlaceholder.classList.add("hidden");
+      workspacePanelBody.innerHTML = "";
       syncViewPanels();
       return;
     }
@@ -629,6 +1175,7 @@ function renderWorkspaceTabs() {
     workspacePlaceholderKicker.textContent = `${definition.base.label} workspace`;
     workspacePlaceholderTitle.textContent = activeOption.title;
     workspacePlaceholderText.textContent = activeOption.text;
+    workspacePanelBody.innerHTML = "";
   }
 
   syncViewPanels();
@@ -639,6 +1186,9 @@ function setActiveView(view) {
   navLinks.forEach((button) => button.classList.toggle("active", button.dataset.view === view));
   topbarModeSwitch?.classList.toggle("hidden", view !== "dashboard");
   renderWorkspaceTabs();
+  if (view === "leave") {
+    renderHolidays();
+  }
 }
 
 function renderProjectStatus() {
@@ -657,6 +1207,7 @@ function renderProjectStatus() {
 }
 
 function renderBarChart(items) {
+  if (!barChart) return;
   const max = Math.max(...items.map((item) => item.value));
   const chartHeight = 180;
   const leftPad = 50;
@@ -677,6 +1228,7 @@ function renderBarChart(items) {
 }
 
 function renderMetricGrid(metrics) {
+  if (!metricGrid) return;
   metricGrid.innerHTML = metrics.map((metric) => `
     <article class="metric-card">
       <h3>${escapeHtml(metric.label)}</h3>
@@ -867,6 +1419,20 @@ function formatHolidayDateLabel(holiday) {
   });
 }
 
+function getSelectedCalendarDateValue() {
+  return state.selectedCalendarDate || formatLocalDate(clampCalendarCursor(state.calendarCursor || new Date()));
+}
+
+function formatSelectedCalendarDateLabel(value) {
+  const date = coerceDate(value);
+  if (!date) return "Selected day";
+  return date.toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+}
+
+function getSchedulesForCalendarDate(dateValue) {
+  return state.schedules.filter((item) => String(item.scheduleDate || item.day || "") === String(dateValue));
+}
+
 function getCurrentYearPublicHolidays() {
   const today = state.calendarCursor || new Date();
   return state.publicHolidays
@@ -875,12 +1441,15 @@ function getCurrentYearPublicHolidays() {
 }
 
 function renderLeaveCalendar() {
+  if (!leaveCalendarBoard || !leaveCalendarMonth || !leaveCalendarMeta) return;
   const today = new Date();
   const currentMonth = clampCalendarCursor(state.calendarCursor || today);
   const firstDayIndex = currentMonth.getDay();
   const totalDays = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const holidaysByDay = new Map();
   const leaveEventsByDay = new Map();
+  const scheduleByDay = new Map();
+  const deadlineProjectsByDay = new Map();
   state.publicHolidays
     .filter((holiday) => Number(holiday.year) === currentMonth.getFullYear() && String(holiday.month) === currentMonth.toLocaleDateString("en-US", { month: "long" }))
     .forEach((holiday) => {
@@ -903,6 +1472,26 @@ function renderLeaveCalendar() {
       leaveEventsByDay.set(day, list);
     }
   });
+
+  state.schedules.forEach((schedule) => {
+    const scheduleDate = coerceDate(schedule.scheduleDate || schedule.day);
+    if (!scheduleDate) return;
+    if (scheduleDate.getFullYear() !== currentMonth.getFullYear() || scheduleDate.getMonth() !== currentMonth.getMonth()) return;
+    const day = scheduleDate.getDate();
+    const list = scheduleByDay.get(day) || [];
+    list.push(schedule);
+    scheduleByDay.set(day, list);
+  });
+
+  state.projects.forEach((project) => {
+    const deadline = coerceDate(project.deadlineDate);
+    if (!deadline) return;
+    if (deadline.getFullYear() !== currentMonth.getFullYear() || deadline.getMonth() !== currentMonth.getMonth()) return;
+    const day = deadline.getDate();
+    const list = deadlineProjectsByDay.get(day) || [];
+    list.push(project);
+    deadlineProjectsByDay.set(day, list);
+  });
   const cells = [];
 
   for (let i = 0; i < firstDayIndex; i += 1) {
@@ -917,23 +1506,48 @@ function renderLeaveCalendar() {
     const isWeekend = isSunday || isSaturday;
     const holidayNames = holidaysByDay.get(day) || [];
     const leaveEntries = leaveEventsByDay.get(day) || [];
+    const daySchedules = scheduleByDay.get(day) || [];
+    const deadlineProjects = deadlineProjectsByDay.get(day) || [];
     const leaveClass = leaveEntries.length ? ` has-leave leave-${classifyLeaveType(leaveEntries[0].type)}` : "";
+    const cellIsoDate = formatLocalDate(cellDate);
+    const isSelected = cellIsoDate === getSelectedCalendarDateValue();
     cells.push(`
-      <div class="leave-calendar-cell ${isToday ? "is-today" : ""} ${isWeekend ? "is-weekend" : ""} ${isSunday ? "is-sunday" : ""} ${isSaturday ? "is-saturday" : ""}${leaveClass}">
+      <button class="leave-calendar-cell ${isToday ? "is-today" : ""} ${isWeekend ? "is-weekend" : ""} ${isSunday ? "is-sunday" : ""} ${isSaturday ? "is-saturday" : ""}${leaveClass} ${isSelected ? "is-selected" : ""}" type="button" data-calendar-date="${cellIsoDate}">
         <div class="leave-calendar-notes">
           ${holidayNames.length ? `<small class="holiday-note">${escapeHtml(holidayNames[0])}</small>` : ""}
           ${leaveEntries.map((entry) => `<small class="leave-badge leave-badge-${classifyLeaveType(entry.type)}">${escapeHtml(entry.type)}</small>`).join("")}
+          ${daySchedules.slice(0, 2).map((entry) => `<small class="calendar-schedule-note">${escapeHtml(entry.title)}</small>`).join("")}
+          ${deadlineProjects.slice(0, 2).map((project) => `<small class="calendar-deadline-note ${statusClass(project.status || "On Track")}">${escapeHtml(project.name)} deadline</small>`).join("")}
         </div>
         <span>${day}</span>
-      </div>
+      </button>
     `);
   }
 
   leaveCalendarMonth.textContent = formatMonthLabel(currentMonth);
   leaveCalendarMeta.textContent = `${totalDays} days in this month`;
-  leaveCalendarPrevBtn.disabled = currentMonth.getFullYear() === 2000 && currentMonth.getMonth() === 0;
-  leaveCalendarNextBtn.disabled = currentMonth.getFullYear() === 2100 && currentMonth.getMonth() === 11;
+  if (leaveCalendarPrevBtn) {
+    leaveCalendarPrevBtn.disabled = currentMonth.getFullYear() === 2000 && currentMonth.getMonth() === 0;
+  }
+  if (leaveCalendarNextBtn) {
+    leaveCalendarNextBtn.disabled = currentMonth.getFullYear() === 2100 && currentMonth.getMonth() === 11;
+  }
   leaveCalendarBoard.innerHTML = cells.join("");
+}
+
+function renderCalendarPlanner() {
+  if (!calendarPlannerTitle || !calendarPlannerMeta || !calendarProjectDeadlineList || !calendarScheduleList) return;
+  const selectedDate = getSelectedCalendarDateValue();
+  const schedules = getSchedulesForCalendarDate(selectedDate);
+  const deadlineProjects = state.projects.filter((project) => String(project.deadlineDate || "") === String(selectedDate));
+  calendarPlannerTitle.textContent = formatSelectedCalendarDateLabel(selectedDate);
+  calendarPlannerMeta.textContent = `${schedules.length} schedule item(s) and ${deadlineProjects.length} project deadline(s) on this day.`;
+  calendarProjectDeadlineList.innerHTML = deadlineProjects.length
+    ? deadlineProjects.map((project) => `<article class="calendar-detail-item"><h3>${escapeHtml(project.name)}</h3><p>${escapeHtml(project.status)} | Priority: ${escapeHtml(project.priority || "Medium")}</p></article>`).join("")
+    : `<article class="calendar-detail-item"><h3>No project deadline</h3><p>No project deadline is set for this day.</p></article>`;
+  calendarScheduleList.innerHTML = schedules.length
+    ? schedules.map((schedule) => `<article class="calendar-detail-item"><div><h3>${escapeHtml(schedule.title)}</h3><p>${escapeHtml(schedule.note || "No note")}</p></div><div class="record-actions"><button class="mini-btn" type="button" data-edit-calendar-schedule="${schedule.id}">Edit</button><button class="mini-btn danger" type="button" data-delete-calendar-schedule="${schedule.id}">Delete</button></div></article>`).join("")
+    : `<article class="calendar-detail-item"><h3>No schedule for this day</h3><p>Use the form below to add a schedule directly from the calendar.</p></article>`;
 }
 
 function renderHolidayTypePanel(target, snapshot, fallbackName) {
@@ -971,11 +1585,16 @@ function renderDashboard() {
   const data = dashboardData[state.currentRange];
   renderHeroProjects();
   renderMetricGrid(buildOperationalMetrics());
-  capacityPercent.textContent = `${data.capacity.percent}%`;
-  capacityCaption.textContent = data.capacity.caption;
-  capacityFill.style.width = `${data.capacity.percent}%`;
+  if (capacityPercent) {
+    capacityPercent.textContent = `${data.capacity.percent}%`;
+  }
+  if (capacityCaption) {
+    capacityCaption.textContent = data.capacity.caption;
+  }
+  if (capacityFill) {
+    capacityFill.style.width = `${data.capacity.percent}%`;
+  }
   renderProjectStatus();
-  renderScheduleBoard();
   renderBarChart(data.chart);
 }
 
@@ -995,6 +1614,12 @@ function renderScheduleList() {
 }
 
 function renderHolidays() {
+  if (!holidayMonthSummary || !holidayClSummary || !holidayPlSummary || !holidayUnpaidSummary || !holidayYearSummary || !holidayGrid) {
+    return;
+  }
+  if (!state.selectedCalendarDate) {
+    state.selectedCalendarDate = formatLocalDate(clampCalendarCursor(state.calendarCursor || new Date()));
+  }
   const collections = getHolidayCollections();
   const clHoliday = buildHolidaySnapshot(collections.cl, "CL Holiday");
   const plHoliday = buildHolidaySnapshot(collections.pl, "PL Holiday");
@@ -1008,6 +1633,7 @@ function renderHolidays() {
     : "No public holidays in this month yet";
 
   renderLeaveCalendar();
+  renderCalendarPlanner();
 
   holidayMonthSummary.innerHTML = `
     <article class="leave-stat-card">
@@ -1064,18 +1690,26 @@ function renderUsers() {
 
 function renderProjects() {
   const usersById = Object.fromEntries(state.users.map((user) => [user.id, user]));
+  projectStatusInput.innerHTML = buildProjectStatusOptions(projectStatusInput.value || "Assign");
   financeProjectInput.innerHTML = state.projects.map((project) => `<option value="${project.id}">${escapeHtml(project.name)}</option>`).join("");
   projectList.innerHTML = state.projects.map((project) => `<article class="record-card"><div><h3>${escapeHtml(project.name)}</h3><p>Owner: ${escapeHtml(usersById[project.ownerId]?.name || "Unassigned")}</p></div><span class="record-tag ${statusClass(project.status)}">${escapeHtml(project.status)}</span></article>`).join("");
   renderHeroProjects();
   renderProjectStatus();
+  if (state.currentView === "projects") {
+    renderWorkspaceTabs();
+  }
 }
 
 function renderFinances() {
   const projectsById = Object.fromEntries(state.projects.map((project) => [project.id, project]));
   financeList.innerHTML = state.finances.map((finance) => `<article class="record-card"><div><h3>${escapeHtml(finance.type)} | ${formatMoney(finance.amount)}</h3><p>${escapeHtml(projectsById[finance.projectId]?.name || "Unknown project")} | ${escapeHtml(finance.status)}${finance.note ? ` | ${escapeHtml(finance.note)}` : ""}</p></div><div class="record-actions"><button class="mini-btn" type="button" data-edit-finance="${finance.id}">Edit</button><button class="mini-btn danger" type="button" data-delete-finance="${finance.id}">Delete</button></div></article>`).join("");
+  if (state.currentView === "projects") {
+    renderWorkspaceTabs();
+  }
 }
 
 function renderTodos() {
+  if (!todoList) return;
   todoList.innerHTML = state.todos.map((todo) => `<li class="todo-item ${todo.done ? "done" : ""}"><label><input type="checkbox" data-id="${todo.id}" ${todo.done ? "checked" : ""}><span>${escapeHtml(todo.text)}</span></label><button type="button" data-delete="${todo.id}">Delete</button></li>`).join("");
 }
 
@@ -1154,8 +1788,7 @@ function renderMeetings() {
 }
 
 function renderSidebar() {
-  currentUserLabel.textContent = state.authUser?.name || state.authUser?.username || "admin";
-  welcomeTitle.textContent = `Welcome, ${state.authUser?.name || state.authUser?.username || "admin"}`;
+  renderSessionIdentity();
 
   const importantTask = state.todos.find((todo) => !todo.done) || state.todos[0] || null;
   upcomingTaskTitle.textContent = importantTask ? importantTask.text : "No important task right now";
@@ -1182,6 +1815,13 @@ function resetScheduleForm() {
   scheduleForm.reset();
   scheduleRangeInput.value = state.currentRange;
   updateDayOptions(state.currentRange);
+}
+
+function resetCalendarScheduleForm() {
+  state.editingScheduleId = null;
+  calendarScheduleSubmitBtn.textContent = "Add schedule for day";
+  calendarScheduleForm.reset();
+  calendarScheduleColorInput.value = "#2563eb";
 }
 
 function resetHolidayForm() {
@@ -1223,20 +1863,21 @@ modeButtons.forEach((button) => {
   });
 });
 
-workspaceAddBtn.addEventListener("click", () => {
-  const shouldOpen = workspaceMenu.classList.contains("hidden");
-  workspaceMenu.classList.toggle("hidden", !shouldOpen);
-  workspaceAddBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
-});
-
 leaveCalendarPrevBtn?.addEventListener("click", () => shiftCalendarMonth(-1));
 leaveCalendarNextBtn?.addEventListener("click", () => shiftCalendarMonth(1));
+
+leaveCalendarBoard?.addEventListener("click", (event) => {
+  const dateButton = event.target.closest("[data-calendar-date]");
+  if (!dateButton) return;
+  state.selectedCalendarDate = dateButton.getAttribute("data-calendar-date");
+  renderHolidays();
+});
 
 workspaceTabList.addEventListener("click", (event) => {
   const closeButton = event.target.closest("[data-close-workspace-tab]");
   if (closeButton) {
     const tabId = closeButton.getAttribute("data-close-workspace-tab");
-    const openTabs = state.openWorkspaceTabs[state.currentView];
+    const openTabs = state.openWorkspaceTabs[state.currentView] || [];
     state.openWorkspaceTabs[state.currentView] = openTabs.filter((item) => item !== tabId);
     if (state.currentWorkspaceTabId === tabId) {
       state.currentWorkspaceTabId = workspaceDefinitions[state.currentView].base.id;
@@ -1251,37 +1892,165 @@ workspaceTabList.addEventListener("click", (event) => {
   renderWorkspaceTabs();
 });
 
-workspaceMenu.addEventListener("click", (event) => {
-  const optionButton = event.target.closest("[data-open-workspace-tab]");
-  if (!optionButton) return;
-  const tabId = optionButton.getAttribute("data-open-workspace-tab");
-  const openTabs = state.openWorkspaceTabs[state.currentView];
-  if (!openTabs.includes(tabId)) {
-    openTabs.push(tabId);
+workspacePanelBody.addEventListener("click", (event) => {
+  const projectButton = event.target.closest("[data-open-project-tab]");
+  if (projectButton) {
+    const projectId = Number(projectButton.getAttribute("data-open-project-tab"));
+    if (!projectId) return;
+    const tabId = getProjectTabId(projectId);
+    const openTabs = state.openWorkspaceTabs.projects || [];
+    if (!openTabs.includes(tabId)) {
+      openTabs.push(tabId);
+    }
+    state.currentWorkspaceTabId = tabId;
+    renderWorkspaceTabs();
+    return;
   }
-  state.currentWorkspaceTabId = tabId;
-  workspaceMenu.classList.add("hidden");
-  workspaceAddBtn.setAttribute("aria-expanded", "false");
-  renderWorkspaceTabs();
+
+  const removeButton = event.target.closest("[data-remove-project]");
+  if (!removeButton) return;
+  const projectId = Number(removeButton.getAttribute("data-remove-project"));
+  if (!projectId) return;
+  const project = state.projects.find((item) => Number(item.id) === projectId);
+  const confirmed = window.confirm(`Remove project "${project?.name || projectId}" from the database?`);
+  if (!confirmed) return;
+  apiRequest(`/api/projects/${projectId}`, { method: "DELETE" })
+    .then(() => {
+      state.projects = state.projects.filter((item) => Number(item.id) !== projectId);
+      state.projectUpdates = state.projectUpdates.filter((item) => Number(item.projectId) !== projectId);
+      state.finances = state.finances.filter((item) => Number(item.projectId) !== projectId);
+      state.openWorkspaceTabs.projects = (state.openWorkspaceTabs.projects || []).filter((item) => item !== getProjectTabId(projectId));
+      if (state.currentWorkspaceTabId === getProjectTabId(projectId)) {
+        state.currentWorkspaceTabId = "projects-home";
+      }
+      renderProjects();
+      renderFinances();
+      renderSidebar();
+      renderWorkspaceTabs();
+    })
+    .catch((error) => {
+      window.alert(error?.message || "Project could not be removed.");
+    });
 });
 
-document.addEventListener("click", (event) => {
-  if (workspaceMenu.classList.contains("hidden")) return;
-  if (workspaceTabs.contains(event.target)) return;
-  workspaceMenu.classList.add("hidden");
-  workspaceAddBtn.setAttribute("aria-expanded", "false");
-});
-
-scheduleRangeInput.addEventListener("change", () => updateDayOptions(scheduleRangeInput.value));
-
-scheduleForm.addEventListener("submit", async (event) => {
+workspacePanelBody.addEventListener("submit", async (event) => {
+  const statusForm = event.target.closest("[data-project-status-form]");
+  const financeFormEl = event.target.closest("[data-project-finance-form]");
+  const expenseFormEl = event.target.closest("[data-project-expense-form]");
+  const createProjectFormEl = event.target.closest("[data-create-project-form]");
+  if (!statusForm && !financeFormEl && !expenseFormEl && !createProjectFormEl) return;
   event.preventDefault();
+
+  try {
+    if (createProjectFormEl) {
+      const formData = new FormData(createProjectFormEl);
+      const project = await apiRequest("/api/projects", {
+        method: "POST",
+        body: JSON.stringify({
+          name: String(formData.get("name") || "").trim(),
+          ownerId: Number(formData.get("ownerId") || 0),
+          status: String(formData.get("status") || "").trim(),
+          priority: String(formData.get("priority") || "").trim()
+        })
+      });
+      state.projects.unshift(project);
+      renderProjects();
+      renderSidebar();
+      createProjectFormEl.reset();
+      state.currentWorkspaceTabId = "projects-home";
+      renderWorkspaceTabs();
+      return;
+    }
+
+    if (statusForm) {
+      const projectId = Number(statusForm.getAttribute("data-project-status-form"));
+      const formData = new FormData(statusForm);
+      const result = await apiRequest(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: String(formData.get("status") || ""),
+          priority: String(formData.get("priority") || ""),
+          statusRemark: String(formData.get("statusRemark") || "").trim(),
+          deadlineDate: String(formData.get("deadlineDate") || ""),
+          statusUpdatedAt: new Date().toISOString()
+        })
+      });
+      state.projects = state.projects.map((item) => item.id === result.project?.id ? result.project : item);
+      state.projectUpdates = [
+        ...state.projectUpdates.filter((item) => Number(item.projectId) !== projectId),
+        ...(result.projectUpdates || [])
+      ];
+      renderProjects();
+      renderFinances();
+      renderSidebar();
+      renderWorkspaceTabs();
+      return;
+    }
+
+    if (financeFormEl) {
+      const projectId = Number(financeFormEl.getAttribute("data-project-finance-form"));
+      const formData = new FormData(financeFormEl);
+      const result = await apiRequest(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          budget: Number(formData.get("budget") || 0),
+          pendingAmount: Number(formData.get("pendingAmount") || 0),
+          remainingAmount: Number(formData.get("remainingAmount") || 0),
+          financeRemark: String(formData.get("financeRemark") || "").trim(),
+          financeUpdatedAt: new Date().toISOString(),
+          deadlineDate: String(formData.get("deadlineDate") || "")
+        })
+      });
+      state.projects = state.projects.map((item) => item.id === result.project?.id ? result.project : item);
+      state.projectUpdates = [
+        ...state.projectUpdates.filter((item) => Number(item.projectId) !== projectId),
+        ...(result.projectUpdates || [])
+      ];
+      renderProjects();
+      renderFinances();
+      renderSidebar();
+      renderWorkspaceTabs();
+      return;
+    }
+
+    if (expenseFormEl) {
+      const projectId = Number(expenseFormEl.getAttribute("data-project-expense-form"));
+      const formData = new FormData(expenseFormEl);
+      const result = await apiRequest(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          expenseDelta: Number(formData.get("expenseDelta") || 0),
+          savingsDelta: Number(formData.get("savingsDelta") || 0),
+          financeRemark: String(formData.get("financeRemark") || "").trim(),
+          financeUpdatedAt: new Date().toISOString()
+        })
+      });
+      state.projects = state.projects.map((item) => item.id === result.project?.id ? result.project : item);
+      state.projectUpdates = [
+        ...state.projectUpdates.filter((item) => Number(item.projectId) !== projectId),
+        ...(result.projectUpdates || [])
+      ];
+      renderProjects();
+      renderFinances();
+      renderSidebar();
+      renderWorkspaceTabs();
+      return;
+    }
+  } catch (error) {
+    window.alert(error?.message || "Project update could not be saved.");
+  }
+});
+
+calendarScheduleForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const selectedDate = getSelectedCalendarDateValue();
   const payload = {
-    range: scheduleRangeInput.value,
-    day: scheduleDayInput.value,
-    title: scheduleTitleInput.value.trim(),
-    note: scheduleNoteInput.value.trim(),
-    color: scheduleColorInput.value
+    range: "daily",
+    day: selectedDate,
+    scheduleDate: selectedDate,
+    title: calendarScheduleTitleInput.value.trim(),
+    note: calendarScheduleNoteInput.value.trim(),
+    color: calendarScheduleColorInput.value
   };
   if (!payload.title || !payload.note) return;
   if (state.editingScheduleId) {
@@ -1291,35 +2060,33 @@ scheduleForm.addEventListener("submit", async (event) => {
     const created = await apiRequest("/api/schedules", { method: "POST", body: JSON.stringify(payload) });
     state.schedules.unshift(created);
   }
-  resetScheduleForm();
-  renderScheduleBoard();
-  renderScheduleList();
+  resetCalendarScheduleForm();
+  renderHolidays();
   renderSidebar();
 });
 
-scheduleCancelBtn.addEventListener("click", resetScheduleForm);
+calendarScheduleCancelBtn?.addEventListener("click", resetCalendarScheduleForm);
 
-scheduleList.addEventListener("click", async (event) => {
-  const editId = event.target.getAttribute("data-edit-schedule");
-  const deleteId = event.target.getAttribute("data-delete-schedule");
+calendarScheduleList?.addEventListener("click", async (event) => {
+  const editId = event.target.getAttribute("data-edit-calendar-schedule");
+  const deleteId = event.target.getAttribute("data-delete-calendar-schedule");
   if (editId) {
     const schedule = state.schedules.find((item) => item.id === Number(editId));
     if (!schedule) return;
     state.editingScheduleId = schedule.id;
-    scheduleSubmitBtn.textContent = "Update schedule";
-    scheduleRangeInput.value = schedule.range;
-    updateDayOptions(schedule.range);
-    scheduleDayInput.value = schedule.day;
-    scheduleColorInput.value = schedule.color;
-    scheduleTitleInput.value = schedule.title;
-    scheduleNoteInput.value = schedule.note;
+    state.selectedCalendarDate = schedule.scheduleDate || schedule.day || getSelectedCalendarDateValue();
+    calendarScheduleSubmitBtn.textContent = "Update schedule for day";
+    calendarScheduleColorInput.value = schedule.color || "#2563eb";
+    calendarScheduleTitleInput.value = schedule.title;
+    calendarScheduleNoteInput.value = schedule.note;
+    renderHolidays();
     return;
   }
   if (deleteId) {
     await apiRequest(`/api/schedules/${deleteId}`, { method: "DELETE" });
     state.schedules = state.schedules.filter((item) => item.id !== Number(deleteId));
-    renderScheduleBoard();
-    renderScheduleList();
+    resetCalendarScheduleForm();
+    renderHolidays();
     renderSidebar();
   }
 });
@@ -1501,9 +2268,9 @@ meetingForm.addEventListener("submit", async (event) => {
 
 meetingCancelBtn.addEventListener("click", resetMeetingForm);
 
-todoForm.addEventListener("submit", async (event) => {
+todoForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const text = todoInput.value.trim();
+  const text = todoInput?.value.trim();
   if (!text) return;
   const todo = await apiRequest("/api/todos", { method: "POST", body: JSON.stringify({ text }) });
   state.todos.unshift(todo);
@@ -1511,7 +2278,7 @@ todoForm.addEventListener("submit", async (event) => {
   todoForm.reset();
 });
 
-todoList.addEventListener("click", async (event) => {
+todoList?.addEventListener("click", async (event) => {
   const deleteId = event.target.getAttribute("data-delete");
   if (!deleteId) return;
   await apiRequest(`/api/todos/${deleteId}`, { method: "DELETE" });
@@ -1519,7 +2286,7 @@ todoList.addEventListener("click", async (event) => {
   renderTodos();
 });
 
-todoList.addEventListener("change", async (event) => {
+todoList?.addEventListener("change", async (event) => {
   const todoId = event.target.getAttribute("data-id");
   if (!todoId) return;
   const updated = await apiRequest(`/api/todos/${todoId}`, { method: "PATCH", body: JSON.stringify({ done: event.target.checked }) });
@@ -1588,6 +2355,7 @@ async function init() {
     return;
   }
   state.authUser = JSON.parse(savedSession);
+  renderSessionIdentity();
   updateDayOptions(state.currentRange);
   scheduleRangeInput.value = state.currentRange;
   const data = await apiRequest("/api/bootstrap");
@@ -1598,7 +2366,9 @@ async function init() {
   state.todos = data.todos || [];
   state.users = data.users || [];
   state.projects = data.projects || [];
+  state.projectUpdates = data.projectUpdates || [];
   state.schedules = data.schedules || [];
+  state.selectedCalendarDate = formatLocalDate(new Date());
   state.finances = data.finances || [];
   state.calendarCursor = clampCalendarCursor(new Date());
   state.meetings = sortMeetings(state.meetings);
@@ -1612,12 +2382,15 @@ async function init() {
   renderTodos();
   renderMeetings();
   renderSidebar();
-  renderScheduleBoard();
-  renderScheduleList();
   setActiveView("dashboard");
 }
 
 init().catch((error) => {
+  const savedSession = getSessionUser();
+  if (savedSession) {
+    state.authUser = savedSession;
+    renderSessionIdentity();
+  }
   renderOrganization();
   renderMetricGrid(buildMetricFallback(error.message));
   renderHolidays();

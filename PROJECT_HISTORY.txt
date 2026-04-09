@@ -32,6 +32,7 @@ Current Data Setup
 - For now the app uses db.json as the internal database.
 - In JSON mode, `db.json.users` is app data and not the active password source for login.
 - `admin / admin` currently works because the local JSON store has a demo login fallback in code.
+- JSON mode no longer accepts generic same-value demo logins such as `user / user`.
 - SQL Server support has now been added for local SSMS / SQLEXPRESS use.
 - If SQL env vars are not set, the app still falls back to `db.json`.
 - `server.js` now supports loading a local `.env` file automatically.
@@ -59,15 +60,15 @@ Current Product State
 - Dashboard hero area now shows recent project cards with ownership and status.
 - Dashboard metrics now show live workspace counts instead of the old gauge widgets.
 - A separate Organization view now renders the current reporting structure from `dbo.users`.
-- The old Leave section is now labeled `Calender`.
-- The `Calender` workspace now uses a real month calendar with month navigation.
+- The old Leave section is now labeled `Calendar`.
+- The `Calendar` workspace now uses a real month calendar with month navigation.
 - Calendar navigation now supports `Jan 2000` through `Dec 2100`.
 - Leave entries now show separate colors for `CL`, `PL`, and `UNPAID`.
 - Saturdays and Sundays now have different colors in the calendar.
 - Public holidays are shown separately from leave balances.
 - `2026` public holidays have been seeded into SQL and are visible in the app.
 - Non-dashboard sections have a browser-like workspace tab row.
-- Schedules, Projects, Calender, and Meetings support a + button for future tabs.
+- Schedules, Projects, Calendar, and Meetings support a + button for future tabs.
 - Extra non-dashboard tabs currently open placeholder workspace panels.
 - Sidebar now shows an Upcoming... card instead of the old status card.
 - Upcoming card shows:
@@ -76,7 +77,10 @@ Current Product State
   - nearest upcoming meeting countdown when time can be inferred
 - Sidebar stays visually consistent on larger screens.
 - Top-right scope chips have been removed.
-- The `Daily / Weekly / Monthly` switch now stays only on the main Dashboard, not on Meetings / Calender / Projects / Schedules.
+- The `Daily / Weekly / Monthly` switch now stays only on the main Dashboard, not on Meetings / Calendar / Projects / Schedules.
+- Dashboard metric cards, capacity bar, analytics chart, and old to-do panel have been removed from the main dashboard.
+- The dashboard now reuses the calendar day-planner schedule component in place of the old to-do area.
+- Removed dashboard sections now require null-safe frontend bindings so login/session rendering does not break when panels are deleted from the HTML.
 - Meetings now use a full workspace layout with:
   - meeting form
   - meeting selector dropdown
@@ -91,7 +95,7 @@ Current SQL App Mapping
 -----------------------
 - `Schedules` component -> `dbo.employeeSchedule`
 - `Projects` component -> `dbo.employeeProject`
-- `Calender` component -> `dbo.employeeCalendar`
+- `Calendar` component -> `dbo.employeeCalendar`
 - `Meetings` component -> unified `dbo.employeeCalendar` when available, otherwise legacy `dbo.employeeMeeting`
 - `Organization` component -> `dbo.users`
 
@@ -108,7 +112,7 @@ Current SQL Application Flow
 - Current intended module flow:
   - `Schedules` reads and writes `dbo.employeeSchedule`
   - `Projects` reads and writes `dbo.employeeProject`
-  - `Calender` reads and writes `dbo.employeeCalendar`
+  - `Calendar` reads and writes `dbo.employeeCalendar`
   - `Meetings` reads and writes `dbo.employeeCalendar` when unified calendar is present
   - `Meetings` falls back to `dbo.employeeMeeting` only for older database setups
   - `Organization` reads `dbo.users` and builds the tree from `EmpReportingManagerID -> EmpID`
@@ -131,7 +135,7 @@ Recent Completed Work
 - Added automatic `.env` loading so SQL config does not have to be re-entered in every terminal.
 - Refreshed the login and dashboard UI with image assets, project watch cards, operational metrics, and an organization chart.
 - Added image sync support so `images/` is copied into `public/` during startup.
-- Rebuilt the leave workspace into a 6-panel `Calender` layout with the requested 2/3 + 1/3 then half-width rows.
+- Rebuilt the leave workspace into a 6-panel `Calendar` layout with the requested 2/3 + 1/3 then half-width rows.
 - Verified that SQL startup succeeds but `/api/bootstrap` still fails because `scheduleapp` lacks table creation permission.
 - Switched the active SQL login path to the current `dbo.users` schema with `EmpUsername` / `EmpPassword`.
 - Verified `owner1 / owner123` works against the app API in SQL mode.
@@ -231,6 +235,21 @@ Git commit:
 - working tree only (not committed yet)
 Next step:
 - Restart the live backend on `localhost:3000` when server-side meeting API changes are made, then continue with project, schedule, and dashboard component updates and review.
+
+Date: 2026-04-09
+What changed:
+- Updated docs to reflect the latest dashboard cleanup.
+- Recorded that the dashboard now removes the old metrics, capacity, analytics, and to-do panels.
+- Recorded that the calendar day-planner schedule component now appears on the main dashboard.
+- Recorded that JSON-mode demo auth now allows only the configured admin fallback, while `owner1 / owner123` is verified through SQL mode.
+- Normalized current docs from `Calender` to `Calendar` where those sections describe the active UI.
+Files touched:
+- README.md
+- PROJECT_HISTORY.txt
+Git commit:
+- working tree only (not committed yet)
+Next step:
+- Continue dashboard cleanup and keep README / PROJECT_HISTORY aligned with the live UI after each structural change.
 
 Update Log Template
 -------------------

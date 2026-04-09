@@ -187,7 +187,8 @@ async function handleApi(request, response, pathname) {
     const payload = {
       name: normalizeText(body.name),
       ownerId: normalizeNumber(body.ownerId),
-      status: normalizeText(body.status)
+      status: normalizeText(body.status),
+      priority: normalizeText(body.priority) || "Medium"
     };
     if (!payload.name || Number.isNaN(payload.ownerId) || !payload.status) {
       sendJson(response, 400, { error: "Project name, owner, and status are required" });
@@ -195,6 +196,46 @@ async function handleApi(request, response, pathname) {
     }
 
     sendJson(response, 201, await store.createProject(payload, actor));
+    return;
+  }
+
+  if (request.method === "PATCH" && pathname.startsWith("/api/projects/")) {
+    const projectId = Number(pathname.split("/").pop());
+    const body = await parseBody(request);
+    const project = await store.updateProject(projectId, {
+      status: body.status === undefined ? undefined : normalizeText(body.status),
+      priority: body.priority === undefined ? undefined : normalizeText(body.priority),
+      statusRemark: body.statusRemark === undefined ? undefined : normalizeText(body.statusRemark),
+      statusUpdatedAt: body.statusUpdatedAt === undefined ? undefined : normalizeText(body.statusUpdatedAt),
+      budget: body.budget === undefined || body.budget === null || body.budget === "" ? undefined : normalizeNumber(body.budget),
+      spentAmount: body.spentAmount === undefined || body.spentAmount === null || body.spentAmount === "" ? undefined : normalizeNumber(body.spentAmount),
+      pendingAmount: body.pendingAmount === undefined || body.pendingAmount === null || body.pendingAmount === "" ? undefined : normalizeNumber(body.pendingAmount),
+      remainingAmount: body.remainingAmount === undefined || body.remainingAmount === null || body.remainingAmount === "" ? undefined : normalizeNumber(body.remainingAmount),
+      financeRemark: body.financeRemark === undefined ? undefined : normalizeText(body.financeRemark),
+      financeUpdatedAt: body.financeUpdatedAt === undefined ? undefined : normalizeText(body.financeUpdatedAt),
+      deadlineDate: body.deadlineDate === undefined ? undefined : normalizeText(body.deadlineDate),
+      expenseDelta: body.expenseDelta === undefined || body.expenseDelta === null || body.expenseDelta === "" ? undefined : normalizeNumber(body.expenseDelta),
+      savingsDelta: body.savingsDelta === undefined || body.savingsDelta === null || body.savingsDelta === "" ? undefined : normalizeNumber(body.savingsDelta)
+    }, actor);
+    if (!project) {
+      notFound(response);
+      return;
+    }
+
+    sendJson(response, 200, project);
+    return;
+  }
+
+  if (request.method === "DELETE" && pathname.startsWith("/api/projects/")) {
+    const projectId = Number(pathname.split("/").pop());
+    const deleted = await store.deleteProject(projectId, actor);
+    if (!deleted) {
+      notFound(response);
+      return;
+    }
+
+    response.writeHead(204);
+    response.end();
     return;
   }
 
@@ -290,6 +331,7 @@ async function handleApi(request, response, pathname) {
     const payload = {
       range: normalizeText(body.range),
       day: normalizeText(body.day),
+      scheduleDate: normalizeText(body.scheduleDate),
       title: normalizeText(body.title),
       note: normalizeText(body.note),
       color: normalizeText(body.color)
@@ -309,6 +351,7 @@ async function handleApi(request, response, pathname) {
     const schedule = await store.updateSchedule(scheduleId, {
       range: body.range === undefined ? undefined : normalizeText(body.range),
       day: body.day === undefined ? undefined : normalizeText(body.day),
+      scheduleDate: body.scheduleDate === undefined ? undefined : normalizeText(body.scheduleDate),
       title: body.title === undefined ? undefined : normalizeText(body.title),
       note: body.note === undefined ? undefined : normalizeText(body.note),
       color: body.color === undefined ? undefined : normalizeText(body.color)
