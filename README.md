@@ -219,6 +219,235 @@ Relevant SQL scripts:
 - invalid time ranges are blocked before save, for example end time earlier than start time
 - meeting links are normalized before save so simple inputs like `meeting.com` still work
 
+## Manual Test Steps
+
+Use this step-by-step flow to manually verify the current app.
+
+### 1. Login
+
+1. Open `http://localhost:3000`
+2. Login with `admin / admin`
+3. Confirm dashboard opens without crashing
+4. Logout
+5. Login with `owner1 / owner123`
+6. Confirm dashboard opens and shows the owner identity instead of `admin`
+7. Logout
+8. Try invalid credentials
+9. Confirm login is blocked and an error is shown
+
+### 2. Session
+
+1. Login as `owner1`
+2. Refresh the browser
+3. Confirm the same user remains signed in
+4. Logout
+5. Open `/dashboard.html` without logging in
+6. Confirm the app redirects back to login
+
+### 3. Dashboard
+
+1. Login and land on the main dashboard
+2. Confirm the hero section renders
+3. Confirm `Project status` renders
+4. Confirm `People and roles` renders
+5. Confirm the dashboard day planner renders
+6. Confirm removed panels such as metrics, capacity, analytics, and old to-do do not appear
+7. Resize the browser and confirm the layout remains usable
+
+### 4. Navigation
+
+1. Open `Dashboard`
+2. Open `Organization`
+3. Open `Projects`
+4. Open `Calendar`
+5. Open `Meetings`
+6. Confirm each sidebar item opens the correct view and updates the active state
+
+### 5. Organization
+
+1. Open `Organization`
+2. Confirm the reporting tree renders
+3. Confirm root users and child users appear in the correct hierarchy
+
+### 6. Calendar
+
+1. Open `Calendar`
+2. Confirm month header, weekday row, and date cells are visible
+3. Click previous month and next month
+4. Confirm month navigation works
+5. Click a calendar date
+6. Confirm the selected date and planner update
+7. Confirm Saturday and Sunday styling is distinct
+8. Confirm today is highlighted
+
+### 7. Public Holidays
+
+1. In `Calendar`, add a public holiday name and date
+2. Save the holiday
+3. Confirm it appears in the holiday list and on the calendar
+4. Edit an existing holiday
+5. Confirm the updated holiday appears correctly
+6. Try saving with missing required values and confirm save is blocked
+
+### 8. Day Planner And Schedules
+
+1. In `Calendar`, click a date
+2. Add a schedule title, note, and color
+3. Save the schedule
+4. Confirm it appears in the planner and on the calendar cell
+5. Edit the schedule
+6. Confirm the update persists
+7. Delete the schedule
+8. Confirm it is removed
+9. Open `Dashboard`
+10. Confirm the same day planner component is available there
+11. Add a schedule from the dashboard planner and confirm it also appears in `Calendar`
+
+### 9. Users
+
+1. In `People and roles`, add a user with name, role, and type
+2. Confirm the user appears in the list
+3. Try saving with missing required values
+4. Confirm invalid saves are blocked
+
+### 10. Projects
+
+1. Open `Projects`
+2. Add a project with valid owner and status
+3. Confirm it appears in project lists and status sections
+4. Update a project status
+5. Confirm the status badge updates
+6. Add or update a project deadline
+7. Confirm the deadline appears in the day planner on the matching date
+
+### 11. Finance
+
+1. Open the finance section
+2. Add a finance record with valid project, type, amount, and status
+3. Confirm the record appears
+4. Edit the record
+5. Confirm the edit persists
+6. Delete the record
+7. Confirm it is removed
+
+### 12. Meetings
+
+1. Open `Meetings`
+2. Add a future meeting with valid title, date, start time, and end time
+3. Confirm it appears in `Upcoming meetings`
+4. Add a past meeting
+5. Confirm it appears in `Meeting history`
+6. Try an invalid time range
+7. Confirm validation blocks save
+8. Save summary and notes for a meeting
+9. Refresh and confirm they persist
+10. Delete a meeting and confirm it is removed
+
+### 13. Sidebar
+
+1. Check the important task card
+2. Check the meeting summary card
+3. Check the upcoming meeting countdown card
+4. Confirm each card shows either real data or a safe fallback message
+
+### 14. Persistence
+
+1. Add a user, project, holiday, meeting, or schedule
+2. Refresh the page
+3. Confirm the new data remains visible
+4. Logout and log back in as the same user
+5. Confirm the same data is still present
+
+### 15. SQL Mode
+
+1. Login as `owner1 / owner123`
+2. Confirm users, projects, holidays, meetings, and schedules come from SQL-backed data
+3. Add a meeting, holiday, or schedule
+4. Refresh the page
+5. Confirm the new data persists
+
+### 16. Error Handling
+
+1. Stop the backend and open the app
+2. Confirm a safe connection error appears
+3. Try invalid form input in active forms
+4. Confirm the app blocks invalid saves instead of breaking the UI
+
+## Test Flow Graph
+
+```text
+START
+  |
+  v
+Open App
+  |
+  v
+Login Test
+  |-----------------------> Invalid Login
+  |                           |
+  |                           v
+  |                        Error Shown
+  |                           |
+  |                           v
+  |---------------------- Back to Login
+  |
+  v
+Valid Login
+  |
+  v
+Session Check
+  |
+  +--> Refresh Check
+  |
+  +--> Logout Check
+  |
+  v
+Dashboard Check
+  |
+  +--> Layout / Symmetry
+  |
+  +--> Sidebar Cards
+  |
+  +--> Day Planner on Dashboard
+  |
+  v
+Navigation Check
+  |
+  +--> Organization
+  |
+  +--> Projects
+  |
+  +--> Calendar
+  |
+  +--> Meetings
+  |
+  v
+Calendar Check
+  |
+  +--> Month Navigation
+  |
+  +--> Date Selection
+  |
+  +--> Public Holiday Add/Edit
+  |
+  +--> Day Planner Add/Edit/Delete Schedule
+  |
+  v
+Projects / Users / Finance Check
+  |
+  v
+Meetings Check
+  |
+  v
+Persistence Check
+  |
+  v
+SQL Verification
+  |
+  v
+END
+```
+
 ## Current Focus
 
 Work completed recently is mainly around:
@@ -277,6 +506,78 @@ Recommended visibility logic for later:
 - employee -> own records only
 - manager -> own records plus junior records
 - owner/admin -> all records
+
+## Database Table Relationships
+
+Current SQL-facing tables and how the app uses them:
+
+| Table | Primary key | Main link column(s) | Connected to | Purpose in app |
+| --- | --- | --- | --- | --- |
+| `dbo.users` | `EmpID` | `EmpReportingManagerID`, `EmpUsername`, `EmpEmail` | self, `dbo.employeeProject.EmpID`, `dbo.employeeSchedule.EmpID`, `dbo.employeeCalendar.EmpID`, legacy `dbo.employeeMeeting.EmpID` | login identity, user list, organization tree, ownership root |
+| `dbo.employeeProject` | `projectId` | `EmpID` | `dbo.users.EmpID`, `dbo.employeeProjectUpdateHistory.projectId` | project records owned by an employee |
+| `dbo.employeeProjectUpdateHistory` | `projectUpdateId` | `projectId`, `EmpID` | `dbo.employeeProject.projectId`, `dbo.users.EmpID` | project status / finance change history |
+| `dbo.employeeSchedule` | `scheduleId` | `EmpID`, `scheduleTypeId` | `dbo.users.EmpID`, `dbo.scheduleType.scheduleTypeId` | direct schedule records when legacy schedule table is active |
+| `dbo.scheduleType` | `scheduleTypeId` | `scheduleTypeId` | `dbo.employeeSchedule.scheduleTypeId` | lookup table for schedule type names |
+| `dbo.employeeCalendar` | `calendarId` | `EmpID`, `entryCategory`, `entryType`, `referenceTable` | `dbo.users.EmpID` | unified calendar table for public holidays, leave, meetings, schedules, and summary entries |
+| `dbo.employeeMeeting` | `meetingId` | `EmpID` | `dbo.users.EmpID` | legacy meeting table used only when unified calendar meeting storage is unavailable |
+| `dbo.CL_Holiday` | app-specific row id in DB | employee code / year fields | indirectly mapped from `EmpID` in SQL queries | legacy leave balance source when unified calendar leave summaries are unavailable |
+| `dbo.PL_Holiday` | app-specific row id in DB | employee code / year fields | indirectly mapped from `EmpID` in SQL queries | legacy leave balance source when unified calendar leave summaries are unavailable |
+| `dbo.Unpaid_Holiday` | app-specific row id in DB | employee code / year fields | indirectly mapped from `EmpID` in SQL queries | legacy leave balance source when unified calendar leave summaries are unavailable |
+
+### Relationship Notes
+
+- `dbo.users` is the main parent table for app identity and ownership.
+- `EmpReportingManagerID -> EmpID` creates the organization hierarchy inside `dbo.users`.
+- `dbo.employeeProject.EmpID -> dbo.users.EmpID` ties projects to their owner.
+- `dbo.employeeProjectUpdateHistory.projectId -> dbo.employeeProject.projectId` ties updates to a project.
+- `dbo.employeeProjectUpdateHistory.EmpID -> dbo.users.EmpID` keeps the owning employee on each history row.
+- `dbo.employeeSchedule.EmpID -> dbo.users.EmpID` ties schedules to a user in legacy schedule mode.
+- `dbo.employeeSchedule.scheduleTypeId -> dbo.scheduleType.scheduleTypeId` resolves the schedule type label.
+- `dbo.employeeCalendar.EmpID -> dbo.users.EmpID` ties unified calendar rows to a user.
+- `dbo.employeeMeeting.EmpID -> dbo.users.EmpID` ties legacy meetings to a user.
+- `dbo.employeeCalendar` is now the central multi-purpose table for:
+  - public holidays
+  - leave events
+  - meeting records
+  - schedule-style calendar entries
+  - holiday summary rows
+
+## Database Graph
+
+```text
+dbo.users
+  |
+  +-- EmpReportingManagerID ----> dbo.users.EmpID
+  |
+  +-- EmpID --------------------> dbo.employeeProject.EmpID
+  |                                |
+  |                                +--> dbo.employeeProjectUpdateHistory.projectId
+  |                                |
+  |                                +--> dbo.employeeProjectUpdateHistory.EmpID
+  |
+  +-- EmpID --------------------> dbo.employeeSchedule.EmpID
+  |                                |
+  |                                +--> dbo.scheduleType.scheduleTypeId
+  |
+  +-- EmpID --------------------> dbo.employeeCalendar.EmpID
+  |
+  +-- EmpID --------------------> dbo.employeeMeeting.EmpID   (legacy fallback)
+
+dbo.employeeCalendar
+  |
+  +-- entryCategory = HOLIDAY
+  +-- entryCategory = MEETING
+  +-- referenceTable = employeeCalendar:schedule
+  +-- leave / summary rows for calendar-based balances
+
+Legacy leave fallback:
+dbo.CL_Holiday
+dbo.PL_Holiday
+dbo.Unpaid_Holiday
+  ^
+  |
+employee code is derived from logged-in EmpID in SQL queries
+```
 
 ## Node version
 
