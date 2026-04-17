@@ -138,9 +138,13 @@ function formatApiErrorMessage(error) {
 function getRequestActor(request) {
   const username = normalizeText(request.headers["x-auth-username"]);
   const employeeCode = normalizeText(request.headers["x-auth-employee-code"]);
+  const name = normalizeText(request.headers["x-auth-employee-name"]);
+  const role = normalizeText(request.headers["x-auth-employee-role"]);
   return {
     username: username || null,
-    employeeCode: employeeCode || null
+    employeeCode: employeeCode || null,
+    name: name || null,
+    role: role || null
   };
 }
 

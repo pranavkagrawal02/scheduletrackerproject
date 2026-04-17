@@ -9,11 +9,12 @@ Schedule Tracker Hub is a browser-based planning dashboard for:
 - finance records
 - shared to-dos
 
-The app now supports two local storage modes:
+The app now supports three local storage modes:
 
 - frontend served locally by `server.js`
 - default data stored in local [db.json](/d:/PranavData/scheduleTrackerProject/db.json)
-- optional SQL Server storage for SSMS / SQL Server Express setups
+- hybrid mode where SQL Server stores login and core employee records, while each employee gets a dedicated JSON file under `employee-data/`
+- optional full SQL Server storage when `STORE_PROVIDER=sqlserver` is enabled
 - refreshed dashboard UI with project watch cards, an organization view, a real month calendar, a dashboard day planner, and a full meetings workspace
 
 ## Quick Start
@@ -62,8 +63,9 @@ When you run `npm start`:
 1. `scripts/sync-public.js` copies frontend files into `public/`
 2. `server.js` starts the local web server
 3. the app reads and writes data from either:
-   - [db.json](/d:/PranavData/scheduleTrackerProject/db.json), or
-   - SQL Server when `SQL_SERVER` and `SQL_DATABASE` are set
+   - [db.json](/d:/PranavData/scheduleTrackerProject/db.json) in local JSON mode,
+   - SQL Server plus per-employee JSON files in hybrid mode, or
+   - SQL Server only when `STORE_PROVIDER=sqlserver`
 
 The store selection lives in [src/store/index.js](/d:/PranavData/scheduleTrackerProject/src/store/index.js).
 
@@ -71,9 +73,9 @@ You can also create a local `.env` file from [.env.example](/d:/PranavData/sched
 
 Authentication behavior:
 
-- when SQL env vars are not set, the app uses the JSON store and a development/demo login flow for the configured demo admin account
-- in that JSON mode, `admin / admin` comes from code configuration, not from a user record in [db.json](/d:/PranavData/scheduleTrackerProject/db.json)
-- when `SQL_SERVER` and `SQL_DATABASE` are set, the app switches to SQL Server-backed login checks against `dbo.users`
+- in hybrid mode, login and key employee fields come from SQL Server, and each employee's working data is stored in a file named like `EmpID_Designation_Name.json`
+- in JSON mode, `admin / admin` comes from code configuration, not from a user record in [db.json](/d:/PranavData/scheduleTrackerProject/db.json)
+- when `STORE_PROVIDER=sqlserver`, the app switches to full SQL Server-backed storage
 
 ## Project structure
 

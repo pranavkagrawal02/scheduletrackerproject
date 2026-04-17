@@ -1,0 +1,18 @@
+{
+  "profile": {
+    "employeeId": 1,
+    "employeeCode": "1",
+    "username": "owner1",
+    "name": "Pranav Kumar",
+    "role": "Owner"
+  },
+  "projects": [],
+  "projectUpdates": [],
+  "holidays": [],
+  "publicHolidays": [],
+  "leaveEvents": [],
+  "todos": [],
+  "meetings": [],
+  "schedules": [],
+  "finances": []
+}

@@ -320,6 +320,12 @@ async function apiRequest(path, options = {}) {
   if (authUser?.employeeCode) {
     headers["X-Auth-Employee-Code"] = authUser.employeeCode;
   }
+  if (authUser?.name) {
+    headers["X-Auth-Employee-Name"] = authUser.name;
+  }
+  if (authUser?.role) {
+    headers["X-Auth-Employee-Role"] = authUser.role;
+  }
 
   const response = await fetch(path, {
     headers: {

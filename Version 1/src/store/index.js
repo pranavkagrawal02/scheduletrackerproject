@@ -7,7 +7,7 @@ function normalizeProvider(value) {
 }
 
 function resolveDataRoot(rootDir) {
-  const folderName = String(process.env.DATA_ROOT || "version 2").trim() || "version 2";
+  const folderName = String(process.env.DATA_ROOT || "version 1").trim() || "version 1";
   return path.join(rootDir, folderName);
 }
 

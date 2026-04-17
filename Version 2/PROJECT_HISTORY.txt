@@ -1,0 +1,262 @@
+Schedule Tracker Hub - Project History
+======================================
+
+Purpose
+-------
+This file is a simple running history of the project so work can continue
+even if the chat thread is lost. Keep updating it as the project changes.
+
+Project Location
+----------------
+Local path: D:\PranavData\scheduleTrackerProject
+GitHub repo: https://github.com/pranavkagrawal02/scheduletrackerproject
+
+How To Run
+----------
+1. Open terminal in: D:\PranavData\scheduleTrackerProject
+2. Run:
+   npm install
+   set PORT=3001
+   npm start
+3. Open:
+   http://127.0.0.1:3001
+4. Login:
+   username: admin
+   password: admin
+5. Login note:
+   `admin / admin` is currently only a development/demo login.
+   In local JSON mode it does not come from `db.json.users`.
+
+Current Data Setup
+------------------
+- For now the app uses db.json as the internal database.
+- In JSON mode, `db.json.users` is app data and not the active password source for login.
+- `admin / admin` currently works because the local JSON store has a demo login fallback in code.
+- JSON mode no longer accepts generic same-value demo logins such as `user / user`.
+- SQL Server support has now been added for local SSMS / SQLEXPRESS use.
+- If SQL env vars are not set, the app still falls back to `db.json`.
+- `server.js` now supports loading a local `.env` file automatically.
+- Current SQL path expects:
+  - server: `localhost`
+  - database: `ScheduleTracker`
+  - SQL login: `scheduleapp`
+  - SQL password: `Schedule@123` (or the user-chosen replacement)
+- Current blocker found on this machine:
+  - the app now reaches SQL Server successfully with `scheduleapp`
+  - the first `/api/bootstrap` call fails with: `CREATE TABLE permission denied in database 'ScheduleTracker'`
+  - `scheduleapp` needs `db_ddladmin`, or `dbo.schedules` must be created manually by an admin user
+- SQL login behavior:
+  - JSON mode uses a development/demo login path
+  - SQL Server mode is intended to use application users stored in `dbo.users`
+  - `admin / admin` should be treated as a dev fallback, not as the real database user account
+
+Current Product State
+---------------------
+- Login page works.
+- SQL-backed login now works against `dbo.users` using the current `Emp...` column naming.
+- Left side of login page now shows the NIELIT image instead of the old text-only welcome block.
+- Dashboard layout is active.
+- Dashboard top area stays in its original compact layout.
+- Dashboard hero area now shows recent project cards with ownership and status.
+- Dashboard metrics now show live workspace counts instead of the old gauge widgets.
+- A separate Organization view now renders the current reporting structure from `dbo.users`.
+- The old Leave section is now labeled `Calendar`.
+- The `Calendar` workspace now uses a real month calendar with month navigation.
+- Calendar navigation now supports `Jan 2000` through `Dec 2100`.
+- Leave entries now show separate colors for `CL`, `PL`, and `UNPAID`.
+- Saturdays and Sundays now have different colors in the calendar.
+- Public holidays are shown separately from leave balances.
+- `2026` public holidays have been seeded into SQL and are visible in the app.
+- Non-dashboard sections have a browser-like workspace tab row.
+- Schedules, Projects, Calendar, and Meetings support a + button for future tabs.
+- Extra non-dashboard tabs currently open placeholder workspace panels.
+- Sidebar now shows an Upcoming... card instead of the old status card.
+- Upcoming card shows:
+  - important task
+  - meeting summary
+  - nearest upcoming meeting countdown when time can be inferred
+- Sidebar stays visually consistent on larger screens.
+- Top-right scope chips have been removed.
+- The `Daily / Weekly / Monthly` switch now stays only on the main Dashboard, not on Meetings / Calendar / Projects / Schedules.
+- Dashboard metric cards, capacity bar, analytics chart, and old to-do panel have been removed from the main dashboard.
+- The dashboard now reuses the calendar day-planner schedule component in place of the old to-do area.
+- Removed dashboard sections now require null-safe frontend bindings so login/session rendering does not break when panels are deleted from the HTML.
+- Meetings now use a full workspace layout with:
+  - meeting form
+  - meeting selector dropdown
+  - upcoming meetings list
+  - meeting history list
+  - summary and notes editor
+- Users can add future meetings or enter missed meetings later so older meetings go to `Meeting history`.
+- Meeting form now validates time order before save and shows a clear message if end time is before start time.
+- Meeting link input no longer silently blocks save because of browser URL validation.
+
+Current SQL App Mapping
+-----------------------
+- `Schedules` component -> `dbo.employeeSchedule`
+- `Projects` component -> `dbo.employeeProject`
+- `Calendar` component -> `dbo.employeeCalendar`
+- `Meetings` component -> unified `dbo.employeeCalendar` when available, otherwise legacy `dbo.employeeMeeting`
+- `Organization` component -> `dbo.users`
+
+Current SQL Application Flow
+----------------------------
+- `Login Page -> dbo.users -> session identity -> API calls -> feature tables -> dashboard UI`
+- Login checks:
+  - `EmpUsername`
+  - `EmpPassword`
+  - `EmpID`
+  - `EmpFullName`
+  - `EmpDesignation`
+- After login, the app should use the logged-in employee identity for all feature fetch/save calls.
+- Current intended module flow:
+  - `Schedules` reads and writes `dbo.employeeSchedule`
+  - `Projects` reads and writes `dbo.employeeProject`
+  - `Calendar` reads and writes `dbo.employeeCalendar`
+  - `Meetings` reads and writes `dbo.employeeCalendar` when unified calendar is present
+  - `Meetings` falls back to `dbo.employeeMeeting` only for older database setups
+  - `Organization` reads `dbo.users` and builds the tree from `EmpReportingManagerID -> EmpID`
+- Recommended future access scope:
+  - employee -> own data
+  - manager -> own data plus junior data
+  - owner/admin -> all data
+
+Recent Completed Work
+---------------------
+- Prepared project for Firebase Hosting + Cloud Run + PostgreSQL later.
+- Kept local JSON file workflow for now.
+- Added public/ sync flow for deployable frontend files.
+- Updated README with Windows-first run instructions.
+- Pushed latest code to GitHub.
+- Removed the extra Firestore and GitHub deploy scaffolding to keep the project local-only.
+- Added SQL Server store support for the local app.
+- Documented SQL login creation in SSMS for `scheduleapp`.
+- Confirmed current SQL connection issue is auth mode mismatch, not a JavaScript syntax error.
+- Added automatic `.env` loading so SQL config does not have to be re-entered in every terminal.
+- Refreshed the login and dashboard UI with image assets, project watch cards, operational metrics, and an organization chart.
+- Added image sync support so `images/` is copied into `public/` during startup.
+- Rebuilt the leave workspace into a 6-panel `Calendar` layout with the requested 2/3 + 1/3 then half-width rows.
+- Verified that SQL startup succeeds but `/api/bootstrap` still fails because `scheduleapp` lacks table creation permission.
+- Switched the active SQL login path to the current `dbo.users` schema with `EmpUsername` / `EmpPassword`.
+- Verified `owner1 / owner123` works against the app API in SQL mode.
+- Connected current SQL bootstrap loading to the new employee-based schema for users, projects, schedules, and organization hierarchy.
+- Recreated the calendar design around a unified `dbo.employeeCalendar` table.
+- Added SQL scripts for unified calendar redesign, 2026 public holiday seed data, and extended meeting fields.
+- Connected leave UI to SQL-backed leave events and public holidays.
+- Added calendar coloring for leave types plus separate weekend styling.
+- Expanded the meetings area into a dedicated full workspace with upcoming and history sections.
+- Added SQL-backed meeting create, update, and delete endpoints.
+- Added support for meeting location, link, summary, and notes.
+- Added a meeting selector dropdown in the details panel.
+- Removed unnecessary top-right UI chips and hid the range switch outside the Dashboard.
+- Added client-side validation for invalid meeting time ranges.
+- Added a user-facing note that past meetings can be entered later.
+
+Latest Git Status Reference
+---------------------------
+Recent pushed commit:
+- 5c62a7d  Add SQL Server support and refresh dashboard
+
+Earlier important commit:
+- 4ffc9b8  Simplify app to local JSON workflow
+
+What To Tell Codex Next Time
+----------------------------
+Suggested summary:
+
+"Continue Schedule Tracker Hub from PROJECT_HISTORY.txt.
+The app can now run either on db.json or local SQL Server.
+Do not change dashboard top layout unless I ask.
+Current focus is SQL Server connection and local feature work.
+Check whether `scheduleapp` has `CREATE TABLE` permission or whether `dbo.schedules` has been created before testing the SQL flow again."
+
+Open Items / Next Ideas
+-----------------------
+- Add true starred or important task support instead of using first open task.
+- Turn non-dashboard placeholder tabs into real feature tabs.
+- Expand schedule-related sub-tabs from the + menu.
+- Finish validating SQL Server permissions and end-to-end app login flow.
+- Update and review the `Projects` component.
+- Update and review the `Schedules` component.
+- Update and review the `Dashboard` component.
+
+Latest Documentation Update
+---------------------------
+Date: 2026-04-07
+What changed:
+- Updated README to mention the `Calender` workspace and the verified SQL permission blocker.
+- Updated PROJECT_HISTORY to reflect the current `Calender` layout and the `CREATE TABLE permission denied` SQL issue.
+Files touched:
+- README.md
+- PROJECT_HISTORY.txt
+Git commit:
+- working tree only (not committed yet)
+Next step:
+- Commit and push the documentation update if needed.
+
+Date: 2026-04-08
+What changed:
+- Clarified in README that `admin / admin` is a development/demo login in local JSON mode.
+- Clarified that JSON mode does not authenticate from `db.json.users`.
+- Added matching notes in PROJECT_HISTORY so future work keeps demo login and database-backed login separate.
+Files touched:
+- README.md
+- PROJECT_HISTORY.txt
+Git commit:
+- working tree only (not committed yet)
+Next step:
+- Decide whether to keep the demo fallback or move credentials fully into `.env` / database-backed auth.
+
+Date: 2026-04-08
+What changed:
+- Documented the new SQL application flow and the feature-to-table mapping.
+- Recorded that login now works against `dbo.users` with the current `Emp...` schema.
+- Recorded the intended table mapping for schedules, projects, calender, meetings, and organization.
+Files touched:
+- README.md
+- PROJECT_HISTORY.txt
+Git commit:
+- working tree only (not committed yet)
+Next step:
+- Continue connecting the remaining modules so each component reads from and writes to its mapped SQL table.
+
+Date: 2026-04-08
+What changed:
+- Updated docs to reflect the unified employee calendar design and the new meetings workspace.
+- Recorded the 2026 public holiday seed, leave color handling, weekend colors, and long-range calendar navigation.
+- Recorded that meetings now use `dbo.employeeCalendar` when available, with legacy fallback only if needed.
+- Recorded UI cleanup such as removing the top-right chips and hiding the range switch outside Dashboard.
+- Added a note that the live app may need a backend restart after server-side API changes.
+- Recorded that project, schedule, and dashboard component updates and review are still pending.
+Files touched:
+- README.md
+- PROJECT_HISTORY.txt
+Git commit:
+- working tree only (not committed yet)
+Next step:
+- Restart the live backend on `localhost:3000` when server-side meeting API changes are made, then continue with project, schedule, and dashboard component updates and review.
+
+Date: 2026-04-09
+What changed:
+- Updated docs to reflect the latest dashboard cleanup.
+- Recorded that the dashboard now removes the old metrics, capacity, analytics, and to-do panels.
+- Recorded that the calendar day-planner schedule component now appears on the main dashboard.
+- Recorded that JSON-mode demo auth now allows only the configured admin fallback, while `owner1 / owner123` is verified through SQL mode.
+- Normalized current docs from `Calender` to `Calendar` where those sections describe the active UI.
+Files touched:
+- README.md
+- PROJECT_HISTORY.txt
+Git commit:
+- working tree only (not committed yet)
+Next step:
+- Continue dashboard cleanup and keep README / PROJECT_HISTORY aligned with the live UI after each structural change.
+
+Update Log Template
+-------------------
+Copy this block and add new notes below it whenever something changes:
+
+Date:
+What changed:
+Files touched:
+Git commit:
+Next step:

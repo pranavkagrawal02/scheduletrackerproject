@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schedule Tracker Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img class="sidebar-brand-image" src="images/nielit-image.svg" alt="NIELIT logo">
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-link active" type="button" data-view="dashboard">Dashboard</button>
+        <button class="nav-link" type="button" data-view="organization">Organization</button>
+        <button class="nav-link" type="button" data-view="projects">Projects</button>
+        <button class="nav-link" type="button" data-view="leave">Calendar</button>
+        <button class="nav-link" type="button" data-view="meetings">Meetings</button>
+      </nav>
+
+      <div class="sidebar-summary">
+        <p class="eyebrow">Upcoming...</p>
+        <div class="sidebar-upcoming">
+          <article class="upcoming-card">
+            <span class="upcoming-label">Important task</span>
+            <strong id="upcomingTaskTitle">Checking tasks...</strong>
+            <p class="sidebar-note" id="upcomingTaskMeta">Pulling the next open task from your planner.</p>
+          </article>
+          <article class="upcoming-card">
+            <span class="upcoming-label">Meeting</span>
+            <strong id="upcomingMeetingTitle">Checking meetings...</strong>
+            <p class="sidebar-note" id="upcomingMeetingMeta">Finding the best matching meeting from your workspace.</p>
+          </article>
+          <article class="upcoming-card">
+            <span class="upcoming-label">Upcoming meeting</span>
+            <strong id="upcomingMeetingCountdown">Calculating...</strong>
+            <p class="sidebar-note" id="upcomingMeetingCountdownMeta">Working out the next meeting time.</p>
+          </article>
+        </div>
+      </div>
+
+      <div class="sidebar-user">
+        <div>
+          <p class="eyebrow">Signed in</p>
+          <strong id="currentUserLabel">Not signed in</strong>
+        </div>
+        <button id="logoutBtn" type="button">Logout</button>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Planning workspace</p>
+          <h1 id="welcomeTitle">Welcome</h1>
+        </div>
+
+      </header>
+
+      <section class="workspace-tabs hidden" id="workspaceTabs">
+        <div class="workspace-tabbar">
+          <div class="workspace-tablist" id="workspaceTabList"></div>
+        </div>
+        <article class="panel workspace-placeholder hidden" id="workspacePlaceholder">
+          <p class="panel-kicker" id="workspacePlaceholderKicker">Workspace tab</p>
+          <h2 id="workspacePlaceholderTitle">Feature tab</h2>
+          <p class="muted" id="workspacePlaceholderText">Feature details will appear here.</p>
+          <div class="workspace-panel-body" id="workspacePanelBody"></div>
+        </article>
+      </section>
+
+      <main class="dashboard-grid">
+        <section class="panel hero-panel wide-panel view-panel" data-section="dashboard">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Workspace overview</p>
+              <h2>Manage daily operations, team updates, schedules, and meeting follow-up from one workspace.</h2>
+            </div>
+          </div>
+          <div class="hero-banner">
+            <div class="hero-summary">
+              <p class="hero-label">Project watch</p>
+              <strong>Recent projects and delivery ownership</strong>
+              <p class="muted">Keep a quick view of the latest project entries, who is working on them, and their current status without leaving the dashboard.</p>
+            </div>
+            <div class="hero-projects" id="heroProjectList"></div>
+          </div>
+        </section>
+
+        <section class="panel status-panel view-panel" data-section="dashboard">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Latest projects</p>
+              <h2>Project status</h2>
+            </div>
+            <p class="muted">Most recent project entries and their current progress state.</p>
+          </div>
+          <div class="record-list compact-list" id="projectStatusList"></div>
+        </section>
+
+        <section class="panel schedule-panel wide-panel view-panel hidden" data-section="dashboard schedules">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Schedule manager</p>
+              <h2>Add and edit schedule items</h2>
+            </div>
+            <p class="muted">Create daily, weekly, or monthly schedule blocks and place them directly on the board.</p>
+          </div>
+
+          <form class="stack-form" id="scheduleForm">
+            <div class="form-grid form-grid-three">
+              <select id="scheduleRangeInput">
+                <option value="daily">Daily</option>
+                <option value="weekly" selected>Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+              <select id="scheduleDayInput"></select>
+              <select id="scheduleColorInput">
+                <option value="#2563eb">Blue - Project</option>
+                <option value="#0f8b8d">Teal - Meeting</option>
+                <option value="#61b15a">Green - Task</option>
+                <option value="#e6a817">Gold - Leave</option>
+                <option value="#e85d75">Rose - Risk</option>
+                <option value="#6b7280">Gray - General</option>
+              </select>
+            </div>
+            <input id="scheduleTitleInput" type="text" placeholder="Schedule title" maxlength="80">
+            <input id="scheduleNoteInput" type="text" placeholder="Short note, time, or context" maxlength="100">
+            <div class="action-row">
+              <button type="submit" id="scheduleSubmitBtn">Add schedule</button>
+              <button type="button" class="ghost-btn" id="scheduleCancelBtn">Cancel edit</button>
+            </div>
+          </form>
+
+          <div class="schedule-board" id="scheduleBoard"></div>
+          <div class="record-list compact-list" id="scheduleList"></div>
+        </section>
+
+        <section class="panel hero-panel org-panel view-panel" data-section="organization">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Organization component</p>
+              <h2>Organization structure</h2>
+            </div>
+            <p class="muted">Shows who works under whom across the current organization tree.</p>
+          </div>
+          <div class="org-tree" id="organizationTree"></div>
+        </section>
+
+        <section class="leave-layout view-panel" data-section="leave">
+          <div class="leave-grid" id="leaveGrid">
+            <article class="panel leave-card leave-card-calendar">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Calendar</p>
+                  <h2>Calendar</h2>
+                </div>
+                <p class="muted" id="leaveCalendarMeta">Monthly planning overview.</p>
+              </div>
+              <div class="leave-calendar-toolbar">
+                <button class="calendar-nav-btn" type="button" id="leaveCalendarPrevBtn" aria-label="Previous month">&lt;</button>
+                <div class="leave-calendar-month" id="leaveCalendarMonth"></div>
+                <button class="calendar-nav-btn" type="button" id="leaveCalendarNextBtn" aria-label="Next month">&gt;</button>
+              </div>
+              <div class="leave-calendar-weekdays" aria-hidden="true">
+                <span>Sun</span>
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+              </div>
+              <div class="leave-calendar-board" id="leaveCalendarBoard"></div>
+            </article>
+
+            <article class="panel leave-card leave-card-month">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Monthly snapshot</p>
+                  <h2>Holiday (in that Month)</h2>
+                </div>
+              </div>
+              <div class="leave-summary-grid" id="holidayMonthSummary"></div>
+            </article>
+
+            <article class="panel leave-card leave-card-half">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Leave type</p>
+                  <h2>CL Holiday</h2>
+                </div>
+              </div>
+              <div id="holidayClSummary"></div>
+            </article>
+
+            <article class="panel leave-card leave-card-half">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Leave type</p>
+                  <h2>PL Holiday</h2>
+                </div>
+              </div>
+              <div id="holidayPlSummary"></div>
+            </article>
+
+            <article class="panel leave-card leave-card-half">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Leave type</p>
+                  <h2>Unpaid Holiday</h2>
+                </div>
+              </div>
+              <div id="holidayUnpaidSummary"></div>
+            </article>
+
+            <article class="panel leave-card leave-card-half">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Yearly overview</p>
+                  <h2>Public holidays in year</h2>
+                </div>
+                <p class="muted">Add or update public holiday dates for the selected year.</p>
+              </div>
+
+              <div class="leave-summary-grid leave-year-grid" id="holidayYearSummary"></div>
+
+              <form class="stack-form" id="holidayForm">
+                <input id="holidayNameInput" type="text" placeholder="Holiday name" maxlength="100">
+                <input id="holidayDateInput" type="date">
+                <div class="action-row">
+                  <button type="submit" id="holidaySubmitBtn">Save holiday</button>
+                  <button type="button" class="ghost-btn" id="holidayCancelBtn">Cancel edit</button>
+                </div>
+              </form>
+
+              <div class="holiday-grid" id="holidayGrid"></div>
+            </article>
+
+          </div>
+        </section>
+
+        <section class="panel team-panel view-panel" data-section="dashboard projects">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">User workspace</p>
+              <h2>People and roles</h2>
+            </div>
+            <p class="muted">Add single users, teams, departments, or office groups.</p>
+          </div>
+          <form class="stack-form" id="userForm">
+            <input id="userNameInput" type="text" placeholder="User or team name" maxlength="60">
+            <div class="form-grid">
+              <input id="userRoleInput" type="text" placeholder="Role or designation" maxlength="50">
+              <select id="userTypeInput">
+                <option value="Individual">Individual</option>
+                <option value="Team">Team</option>
+                <option value="Corporate">Corporate</option>
+                <option value="Government">Government</option>
+              </select>
+            </div>
+            <button type="submit">Add user</button>
+          </form>
+          <div class="record-list" id="userList"></div>
+        </section>
+
+        <section class="panel project-panel view-panel" data-section="dashboard projects">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Project register</p>
+              <h2>Projects and owners</h2>
+            </div>
+            <p class="muted">Track multiple projects for personal or shared delivery teams.</p>
+          </div>
+          <form class="stack-form" id="projectForm">
+            <input id="projectNameInput" type="text" placeholder="Project name" maxlength="80">
+            <div class="form-grid">
+              <select id="projectOwnerInput"></select>
+              <select id="projectStatusInput">
+                <option value="On track">On track</option>
+                <option value="At risk">At risk</option>
+                <option value="Off track">Off track</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <button type="submit">Add project</button>
+          </form>
+          <div class="record-list" id="projectList"></div>
+        </section>
+
+        <section class="panel finance-panel view-panel" data-section="dashboard projects">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Finance desk</p>
+              <h2>Project finance tracking</h2>
+            </div>
+            <p class="muted">Track budget, expense, grant, invoice, or payment progress for each project.</p>
+          </div>
+          <form class="stack-form" id="financeForm">
+            <div class="form-grid">
+              <select id="financeProjectInput"></select>
+              <select id="financeTypeInput">
+                <option value="Budget">Budget</option>
+                <option value="Expense">Expense</option>
+                <option value="Grant">Grant</option>
+                <option value="Invoice">Invoice</option>
+                <option value="Payment">Payment</option>
+              </select>
+            </div>
+            <div class="form-grid">
+              <input id="financeAmountInput" type="number" min="0" step="0.01" placeholder="Amount">
+              <select id="financeStatusInput">
+                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
+                <option value="Planned">Planned</option>
+                <option value="Paid">Paid</option>
+              </select>
+            </div>
+            <input id="financeNoteInput" type="text" placeholder="Finance note or purpose" maxlength="120">
+            <div class="action-row">
+              <button type="submit" id="financeSubmitBtn">Save finance record</button>
+              <button type="button" class="ghost-btn" id="financeCancelBtn">Cancel edit</button>
+            </div>
+          </form>
+          <div class="record-list" id="financeList"></div>
+        </section>
+
+        <section class="panel leave-card leave-card-wide view-panel" data-section="dashboard">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Day planner</p>
+              <h2 id="calendarPlannerTitle">Selected day</h2>
+            </div>
+            <p class="muted" id="calendarPlannerMeta">Click any date in the calendar to view deadlines and manage schedules for that day.</p>
+          </div>
+          <div class="calendar-planner-grid">
+            <section class="calendar-planner-card">
+              <h3>Project deadlines</h3>
+              <div class="calendar-planner-list" id="calendarProjectDeadlineList"></div>
+            </section>
+            <section class="calendar-planner-card">
+              <h3>Schedules for this day</h3>
+              <div class="calendar-planner-list" id="calendarScheduleList"></div>
+            </section>
+          </div>
+          <form class="stack-form calendar-schedule-form" id="calendarScheduleForm">
+            <div class="form-grid">
+              <input id="calendarScheduleTitleInput" type="text" placeholder="Schedule title" maxlength="80">
+              <select id="calendarScheduleColorInput">
+                <option value="#2563eb">Blue - Project</option>
+                <option value="#0f8b8d">Teal - Meeting</option>
+                <option value="#61b15a">Green - Task</option>
+                <option value="#e6a817">Gold - Leave</option>
+                <option value="#e85d75">Rose - Risk</option>
+                <option value="#6b7280">Gray - General</option>
+              </select>
+            </div>
+            <input id="calendarScheduleNoteInput" type="text" placeholder="Short note, time, or context" maxlength="100">
+            <div class="action-row">
+              <button type="submit" id="calendarScheduleSubmitBtn">Add schedule for day</button>
+              <button type="button" class="ghost-btn" id="calendarScheduleCancelBtn">Cancel edit</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel meeting-panel view-panel" data-section="meetings">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Meeting desk</p>
+              <h2>Meetings workspace</h2>
+            </div>
+            <p class="muted">Add upcoming meetings or enter missed meetings later, then keep links, summary, and notes in one place.</p>
+          </div>
+          <div class="meeting-layout">
+            <div class="meeting-stack">
+              <form class="stack-form meeting-form" id="meetingForm">
+                <input id="meetingTitleInput" type="text" placeholder="Meeting title" maxlength="120">
+                <div class="form-grid">
+                  <label class="form-field">
+                    <span>Meeting date</span>
+                    <input id="meetingDateInput" type="date">
+                  </label>
+                  <label class="form-field">
+                    <span>Meeting location</span>
+                    <input id="meetingLocationInput" type="text" placeholder="Meeting location" maxlength="150">
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label class="form-field">
+                    <span>Start time</span>
+                    <input id="meetingStartTimeInput" type="text" placeholder="03:30 PM" inputmode="text" maxlength="8">
+                  </label>
+                  <label class="form-field">
+                    <span>End time</span>
+                    <input id="meetingEndTimeInput" type="text" placeholder="04:30 PM" inputmode="text" maxlength="8">
+                  </label>
+                </div>
+                <input id="meetingLinkInput" type="text" placeholder="Meeting link">
+                <p class="muted">You can also add a past meeting later. Past-dated meetings will appear in Meeting history.</p>
+                <div class="action-row">
+                  <button id="meetingSubmitBtn" type="submit">Save meeting</button>
+                  <button id="meetingCancelBtn" class="ghost-btn" type="button">Cancel edit</button>
+                </div>
+              </form>
+            </div>
+            <div class="meeting-note meeting-detail-card">
+              <label class="form-field meeting-selector-field">
+                <span>Meeting</span>
+                <select id="meetingSelectInput"></select>
+              </label>
+              <p class="meeting-meta" id="meetingMeta">Choose any meeting from the list.</p>
+              <p class="meeting-detail-line" id="meetingLocationMeta"></p>
+              <p class="meeting-detail-line" id="meetingLinkMeta"></p>
+              <textarea id="meetingSummary" placeholder="Write a short meeting summary for quick review."></textarea>
+              <textarea id="meetingNotes" placeholder="Meeting notes, discussion points, and action items."></textarea>
+              <div class="action-row">
+                <button id="saveNotesBtn" type="button">Save meeting details</button>
+                <button id="deleteMeetingBtn" class="ghost-btn" type="button">Delete meeting</button>
+              </div>
+            </div>
+          </div>
+          <div class="meeting-sections">
+            <article class="meeting-stream">
+              <div class="meeting-stream-head">
+                <p class="panel-kicker">Upcoming</p>
+                <h3>Upcoming meetings</h3>
+              </div>
+              <div class="meeting-list meeting-upcoming-list" id="meetingUpcomingList"></div>
+            </article>
+            <article class="meeting-stream">
+              <div class="meeting-stream-head">
+                <p class="panel-kicker">History</p>
+                <h3>Meeting history</h3>
+              </div>
+              <div class="meeting-list meeting-history-list" id="meetingHistoryList"></div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="dashboard-dynamic.js?v=4"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "schedule-tracker-hub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare:public": "node scripts/sync-public.js",
+    "start": "node scripts/sync-public.js && node server.js",
+    "start:prod": "node server.js",
+    "check": "node --check server.js && node --check login.js && node --check dashboard-dynamic.js && node --check scripts/sync-public.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "mssql": "^11.0.1",
+    "pg": "^8.13.3"
+  }
+}
