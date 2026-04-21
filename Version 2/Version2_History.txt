@@ -142,6 +142,105 @@ PENDING IN THIS SESSION:
    - Terms & conditions checkbox
 
 ================================================================================
+                        REQUIREMENTS FOR FUTURE (TO DO LATER)
+================================================================================
+
+JSON FILE AUTO-CREATION CONFIRMATION:
+✓ YES - Use data from DB (Employee + Login tables)
+✓ YES - Same format as current 1_Pranav.json template
+✓ Status: Implementation COMPLETE
+  - Function: createEmployeeJsonFile() in server.js
+  - Called automatically after registration
+  - Pulls data from store.getEmployeeById()
+  - Creates: EmpDetailsJSON/{empID}_{FirstName}.json
+  - Ready to test once SQL schema is updated
+
+NEXT PRIORITY FEATURES (To Implement Later):
+===========================================
+
+Priority 1 - Testing & Validation:
+[ ] Run SQL script to update Employee table schema
+[ ] Test complete registration flow end-to-end
+[ ] Test all error cases (duplicates, validation)
+[ ] Verify JSON file creation works
+[ ] Verify new user can login successfully
+
+Priority 2 - Enhanced Features:
+[ ] Email verification system
+    - Generate verification code
+    - Send email with code
+    - Verify before account activation
+[ ] Password strength meter
+    - Show strength level (Weak/Medium/Strong)
+    - Real-time feedback as user types
+    - Enforce minimum requirements visually
+[ ] Profile picture upload
+    - Add image upload field in registration
+    - Store in public/uploads/ folder
+    - Link to JSON file
+[ ] Terms & conditions checkbox
+    - Add checkbox before registration
+    - Link to terms page
+    - Require acceptance
+
+Priority 3 - Security Enhancements:
+[ ] CAPTCHA on registration form
+[ ] Rate limiting for registration attempts
+[ ] Email domain validation (prevent fake emails)
+[ ] Password history (prevent reusing old passwords)
+[ ] Account lockout after failed login attempts
+
+Priority 4 - Admin Features:
+[ ] Admin dashboard to view all users
+[ ] Bulk user import from CSV
+[ ] User role management (Admin, Manager, Employee)
+[ ] User deactivation/deletion
+[ ] Password reset by admin
+
+Priority 5 - User Features:
+[ ] Forgot password flow
+[ ] Account settings/profile page
+[ ] Change password functionality
+[ ] Two-factor authentication (2FA)
+[ ] Login history/activity log
+
+================================================================================
+                        IMPLEMENTATION NOTES
+================================================================================
+
+CURRENT ARCHITECTURE:
+- Single-page application (SPA) with 3 phases
+- Phase 1: Login/Registration (on same page, tab toggle)
+- Phase 2: OTP verification (default OTP: 123456)
+- Phase 3: Dashboard (main app interface)
+
+DATABASE STRUCTURE:
+- Employee table: Personal info, department, designation
+- Login table: Credentials, status, timestamps
+- LoginHistory table: Audit trail of login sessions
+
+FILE STRUCTURE:
+- Version 2/public/ → Served to browser
+- Version 2/src/store/ → Database integration
+- Version 2/EmpDetailsJSON/ → Employee profile JSON files
+- Each file: {empID}_{FirstName}.json
+
+SECURITY MEASURES IN PLACE:
+✓ Password hashing (SHA256 + salt: "timechime_salt_2026")
+✓ Client-side form validation
+✓ Server-side validation (required fields, formats)
+✓ Duplicate checks (username, email)
+✓ SQL injection protection (parameterized queries)
+✓ Error messages don't leak sensitive info
+
+TESTING CREDENTIALS (existing accounts):
+- Username: pranav.agarwal | Password: hashed_password_123 | OTP: 123456
+- Username: john.smith | Password: hashed_password_456 | OTP: 123456
+- Username: sarah.johnson | Password: hashed_password_789 | OTP: 123456
+
+================================================================================
+
+================================================================================
                         INITIAL SESSION SUMMARY (2026-04-21 Session 1)
 ================================================================================
 
