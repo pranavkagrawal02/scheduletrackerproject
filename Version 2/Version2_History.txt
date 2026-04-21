@@ -6,7 +6,309 @@
 Project: TimeChime Schedule Tracker
 Version: 2.0
 Start Date: 2026-04-21
-Status: In Development
+Current Date: 2026-04-21
+Status: In Development - FEATURE: Registration System (Phase 1)
+
+================================================================================
+                        CURRENT SESSION (2026-04-21 Session 2)
+================================================================================
+
+WORKING ON: User Registration System Implementation
+Goal: Allow new users to self-register from login page with JSON file creation
+
+COMPLETED IN THIS SESSION:
+✅ 1. Database Schema Update
+   - Added EmpEmail VARCHAR(100) to Employee table
+   - Added EmpPhone VARCHAR(20) to Employee table
+   - Added EmpDesignation VARCHAR(100) to Employee table
+   - Added EmpStatus VARCHAR(20) DEFAULT 'Active' to Employee table
+   - Updated sample data with new fields
+
+✅ 2. Frontend UI - Registration Form
+   - Modified Phase 1 (Login Screen) to include tab navigation
+   - Tab 1: Login (existing form, default visible)
+   - Tab 2: New Registration (new form, toggle visible)
+   - Registration form fields:
+     * First Name (text, required)
+     * Last Name (text, required)
+     * Email (email, required)
+     * Phone (tel, required)
+     * Department (text, required)
+     * Position/Designation (text, required, free-text input)
+     * Username (text, required)
+     * Password (password, min 8 chars, required)
+     * Confirm Password (password, required)
+
+✅ 3. CSS Styling - Tabs & Forms
+   - Tab container with border-bottom navigation
+   - Tab button styling (active state with blue underline)
+   - Registration form styling (matches login form pattern)
+   - Form row grid layout (2-column for name fields)
+   - Error message styling (red text)
+   - Success message styling (green text)
+   - Responsive design (mobile-friendly)
+
+✅ 4. Backend - Password Hashing
+   - Imported crypto module in server.js
+   - Created hashPassword() function using SHA256 + salt
+   - Salt: "timechime_salt_2026"
+   - Updated /api/login to use hashed password comparison
+
+✅ 5. Backend - Registration Endpoint Added
+   - Created POST /api/register endpoint
+   - Validation logic:
+     * Check all required fields present
+     * Password minimum 8 characters
+     * Check username uniqueness (via store.checkUsernameExists)
+     * Check email uniqueness (via store.checkEmailExists)
+   - Success response (201):
+     {
+       "success": true,
+       "message": "Registration successful",
+       "empID": number,
+       "username": string
+     }
+   - Error responses (400/409):
+     {
+       "error": "descriptive message"
+     }
+
+PENDING IN THIS SESSION:
+⏳ 1. Database Methods in sqlserver-store.js
+   - checkUsernameExists(username) - Query Login table for username
+   - checkEmailExists(email) - Query Employee table for email
+   - registerNewEmployee(employeeData) - Insert into Employee & Login tables
+   - getEmployeeById(empID) - Retrieve full employee data
+
+⏳ 2. JSON File Auto-Creation
+   - Create createEmployeeJsonFile(empID) function
+   - Query new employee data from database
+   - Format JSON matching 1_Pranav.json template
+   - Write to EmpDetailsJSON/{empID}_{firstName}.json
+   - Use fs.writeFileSync() for sync file writing
+
+⏳ 3. Frontend - Tab Toggle Logic
+   - Add click handlers for loginTabBtn and registerTabBtn
+   - Toggle between login and registration forms
+   - Update active tab styling
+
+⏳ 4. Frontend - Form Validation
+   - Client-side validation:
+     * Email format validation
+     * Password length check (min 8)
+     * Password match confirmation
+     * Username format validation (alphanumeric + dots/underscores)
+   - Show error messages for invalid input
+
+⏳ 5. Frontend - Registration Form Submission
+   - Handle registrationForm submit event
+   - Client-side validation before POST
+   - Hash password on client (or server-side only)
+   - POST to /api/register
+   - Handle success: Show success message, clear form, return to login tab
+   - Handle errors: Display error message, keep form data
+
+⏳ 6. End-to-End Testing
+   - Test successful registration
+   - Test duplicate username error
+   - Test duplicate email error
+   - Test password validation
+   - Verify database inserts (Employee & Login tables)
+   - Verify JSON file creation in EmpDetailsJSON/
+   - Verify new user can login and reach dashboard
+
+GIT COMMIT:
+- Commit Hash: 5cb84d1
+- Message: "WIP: Add registration form UI and password hashing foundation"
+
+================================================================================
+                        INITIAL SESSION SUMMARY (2026-04-21 Session 1)
+================================================================================
+
+Date: 2026-04-21
+Time: 14:50 - 15:30
+
+CREATED FILES:
+- ScheduleTrackerDB.sql
+  * Created TimeChime database
+  * 3 tables: Employee, Login, LoginHistory
+  * Sample data: 3 employees, 3 login records, 4 history records
+
+- index.html (Updated)
+  * Replaced with 3-phase system
+  * Phase 1: Login form
+  * Phase 2: OTP verification
+  * Phase 3: Dashboard with navigation
+
+- app.js (Created)
+  * Phase management system
+  * Login handler with API calls
+  * OTP verification (default: 123456)
+  * Dashboard initialization
+  * Session management
+  * Navigation between views
+
+- styles.css (Updated)
+  * Added phase container styles
+  * OTP form styling
+  * Dashboard card styling
+  * Responsive design enhancements
+  * Animations and transitions
+
+DOCUMENTATION:
+- PHASE_SETUP.md (Created)
+  * Detailed 3-phase flow documentation
+  * API endpoint specifications
+  * Data flow diagram
+  * Testing instructions
+  * Future enhancements list
+
+- README.md (Updated)
+  * Version 2 feature overview
+  * Quick start guide
+  * Troubleshooting section
+  * PowerShell execution policy fix
+  * Database connection troubleshooting
+
+DATABASE SETUP:
+- Database Name: TimeChime
+- Server: localhost (SQLEXPRESS)
+- User: scheduleapp
+- Password: Schedule@123
+- Port: 1433
+
+TABLES CREATED:
+1. Employee (3 records)
+   - Pranav Kumar Agarwal (EmpID: 1, IT Dept)
+   - John Michael Smith (EmpID: 2, HR Dept)
+   - Sarah Jane Johnson (EmpID: 3, Finance Dept)
+
+2. Login (3 records)
+   - pranav.agarwal / hashed_password_123
+   - john.smith / hashed_password_456
+   - sarah.johnson / hashed_password_789
+
+3. LoginHistory (4 records)
+   - Various login sessions for testing
+
+================================================================================
+                        FEATURES IMPLEMENTED
+================================================================================
+
+✅ Phase 1: Login Screen (3-Phase Auth)
+   - Username & password input
+   - Form validation
+   - Error message display
+   - API call to /api/login
+
+✅ Phase 2: OTP Verification (3-Phase Auth)
+   - OTP input (default: 123456)
+   - Back to login button
+   - Error handling
+
+✅ Phase 3: Dashboard
+   - Sidebar with navigation
+   - Today's Schedule view
+   - Active Projects view
+   - Team Status view
+   - Quick Stats view
+   - Logout functionality
+
+✅ Employee Data Storage
+   - Created EmpDetailsJSON/ folder
+   - 3 sample JSON files: 1_Pranav.json, 2_John.json, 3_Sarah.json
+   - Full employee details per file
+
+🟡 Registration System (IN PROGRESS)
+   - UI: Login/Registration tabs
+   - Backend: /api/register endpoint skeleton
+   - Password hashing implemented
+   - Database methods pending
+   - JSON file creation pending
+   - Frontend logic pending
+
+================================================================================
+                        IMPORTANT NOTES
+================================================================================
+
+PASSWORD HASHING:
+- Using SHA256 with static salt: "timechime_salt_2026"
+- All new registrations use hashed passwords
+- Existing test accounts still use plain text (no migration needed)
+- Login validates by hashing input and comparing
+
+DATABASE CONNECTION:
+- SQL Server connection string: "Server=localhost;Database=TimeChime;User Id=scheduleapp;Password=Schedule@123"
+- Connection pooling enabled
+- Indexes created for performance
+
+SESSION MANAGEMENT:
+- Using browser sessionStorage
+- Two keys: "timeChime.session" (auth flag) and "timeChime.currentUser" (user data)
+- Session persists on page reload (Phase 3 auto-loads)
+- Cleared on logout
+
+FILE STRUCTURE:
+- Version 2/public/ - Served files (index.html, app.js, styles.css)
+- Version 2/src/store/ - Database integration layer
+- Version 2/EmpDetailsJSON/ - Employee JSON files
+- Version 2/*.sql - Database scripts
+
+TESTING CREDENTIALS:
+- Username: pranav.agarwal, Password: hashed_password_123, OTP: 123456
+- Username: john.smith, Password: hashed_password_456, OTP: 123456
+- Username: sarah.johnson, Password: hashed_password_789, OTP: 123456
+
+================================================================================
+                        NEXT STEPS (TO DO)
+================================================================================
+
+PRIORITY: HIGH (BLOCKING)
+- [ ] Complete database methods in sqlserver-store.js
+- [ ] Implement JSON file auto-creation logic
+- [ ] Add frontend tab toggle functionality
+- [ ] Add frontend form validation
+- [ ] Test complete registration flow
+
+PRIORITY: MEDIUM
+- [ ] Handle existing user password migration (plain text → hashed)
+- [ ] Add email verification (optional)
+- [ ] Add username/email suggestions for registration
+- [ ] Implement password strength meter
+
+PRIORITY: LOW
+- [ ] Add CAPTCHA to registration
+- [ ] Email notification on successful registration
+- [ ] Add user profile picture upload
+- [ ] Implement "Forgot Password" flow
+
+================================================================================
+                        COMMANDS FOR RUNNING
+================================================================================
+
+START SERVER:
+  cmd /c npm start
+
+RUN SQL SCRIPT:
+  sqlcmd -S localhost -U scheduleapp -P "Schedule@123" -i ScheduleTrackerDB.sql
+
+UPDATE DATABASE SCHEMA:
+  sqlcmd -S localhost -d TimeChime -U scheduleapp -P "Schedule@123" -i ScheduleTrackerDB.sql
+
+TEST LOGIN:
+  Browser: http://localhost:3001
+  Credentials: pranav.agarwal / hashed_password_123
+  OTP: 123456
+
+================================================================================
+
+END OF VERSION 2 HISTORY LOG
+Last Updated: 2026-04-21 (Session 2 - Registration Implementation)
+
+For detailed implementation plan, refer to: C:\Users\TEST\.claude\plans\sharded-floating-cherny.md
+
+================================================================================
+
 
 ================================================================================
                             INITIAL SETUP
