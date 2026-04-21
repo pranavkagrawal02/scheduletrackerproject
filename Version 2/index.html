@@ -7,19 +7,45 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- PHASE 1: LOGIN SCREEN -->
+  <!-- PHASE 1: LOGIN & REGISTRATION SCREEN -->
   <section class="phase-container" id="phase1-login">
     <div class="login-card">
       <div class="login-copy">
         <img class="login-copy-image" src="images/login-page-image.svg" alt="TimeChime logo">
       </div>
 
-      <form class="login-form" id="loginForm">
+      <!-- Tab Navigation -->
+      <div class="tab-container">
+        <button class="tab-button active" id="loginTabBtn" data-tab="login">Login</button>
+        <button class="tab-button" id="registerTabBtn" data-tab="register">New Registration</button>
+      </div>
+
+      <!-- LOGIN FORM TAB -->
+      <form class="login-form active" id="loginForm" data-form="login">
         <h2>Login to TimeChime</h2>
         <input id="loginUsername" type="text" placeholder="Username" autocomplete="username" required>
         <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required>
         <button type="submit">Login</button>
         <p class="form-error" id="loginError"></p>
+      </form>
+
+      <!-- REGISTRATION FORM TAB -->
+      <form class="login-form hidden" id="registrationForm" data-form="register">
+        <h2>Create Your Account</h2>
+        <div class="form-row">
+          <input id="regFirstName" type="text" placeholder="First Name" required>
+          <input id="regLastName" type="text" placeholder="Last Name" required>
+        </div>
+        <input id="regEmail" type="email" placeholder="Email Address" required>
+        <input id="regPhone" type="tel" placeholder="Phone Number" required>
+        <input id="regDepartment" type="text" placeholder="Department (e.g., IT, HR, Finance)" required>
+        <input id="regDesignation" type="text" placeholder="Position/Designation" required>
+        <input id="regUsername" type="text" placeholder="Username" autocomplete="username" required>
+        <input id="regPassword" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" required>
+        <input id="regConfirmPassword" type="password" placeholder="Confirm Password" autocomplete="new-password" required>
+        <button type="submit">Create Account</button>
+        <p class="form-error" id="registrationError"></p>
+        <p class="form-success" id="registrationSuccess"></p>
       </form>
     </div>
   </section>

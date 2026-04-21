@@ -2,9 +2,15 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
+const crypto = require("crypto");
 const { createStore } = require("./src/store");
 
 const ROOT = __dirname;
+
+// ===== Password Hashing Function =====
+function hashPassword(password) {
+  return crypto.createHash("sha256").update(password + "timechime_salt_2026").digest("hex");
+}
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -155,7 +161,7 @@ async function handleApi(request, response, pathname) {
     const body = await parseBody(request);
     const username = normalizeText(body.username);
     const password = String(body.password || "");
-    const user = await store.validateLogin(username, password);
+    const user = await store.validateLogin(username, hashPassword(password));
     if (!user) {
       sendJson(response, 401, { error: "Invalid username or password." });
       return;
@@ -163,6 +169,76 @@ async function handleApi(request, response, pathname) {
 
     sendJson(response, 200, { user });
     return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/register") {
+    const body = await parseBody(request);
+
+    // Validate required fields
+    const firstName = normalizeText(body.firstName);
+    const lastName = normalizeText(body.lastName);
+    const email = normalizeText(body.email);
+    const phone = normalizeText(body.phone);
+    const department = normalizeText(body.department);
+    const designation = normalizeText(body.designation);
+    const username = normalizeText(body.username);
+    const password = String(body.password || "");
+
+    if (!firstName || !lastName || !email || !phone || !department || !designation || !username || !password) {
+      sendJson(response, 400, { error: "All fields are required" });
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      sendJson(response, 400, { error: "Password must be at least 8 characters" });
+      return;
+    }
+
+    // Check if username already exists
+    try {
+      const existingUser = await store.checkUsernameExists(username);
+      if (existingUser) {
+        sendJson(response, 409, { error: "Username already exists" });
+        return;
+      }
+
+      // Check if email already exists
+      const existingEmail = await store.checkEmailExists(email);
+      if (existingEmail) {
+        sendJson(response, 409, { error: "Email already registered" });
+        return;
+      }
+
+      // Register new employee
+      const hashedPassword = hashPassword(password);
+      const result = await store.registerNewEmployee({
+        firstName,
+        lastName,
+        email,
+        phone,
+        department,
+        designation,
+        username,
+        hashedPassword
+      });
+
+      if (result.error) {
+        sendJson(response, 400, { error: result.error });
+        return;
+      }
+
+      sendJson(response, 201, {
+        success: true,
+        message: "Registration successful",
+        empID: result.empID,
+        username: username
+      });
+      return;
+    } catch (error) {
+      sendJson(response, 500, { error: "Registration failed: " + error.message });
+      return;
+    }
   }
 
   if (request.method === "GET" && pathname === "/api/bootstrap") {

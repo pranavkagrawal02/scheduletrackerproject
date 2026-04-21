@@ -2239,3 +2239,96 @@ button:active {
   padding: 6px 0;
 }
 
+/* =====================================================
+   TAB NAVIGATION STYLES
+   ===================================================== */
+
+.tab-container {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 2px solid rgba(21, 35, 59, 0.1);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 120ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tab-button:hover {
+  color: var(--ink);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.tab-button.active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+}
+
+/* =====================================================
+   REGISTRATION FORM STYLES
+   ===================================================== */
+
+.login-form {
+  transition: opacity 200ms ease;
+}
+
+.login-form.hidden {
+  display: none;
+}
+
+.login-form.active {
+  display: block;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-row input {
+  width: 100%;
+}
+
+.form-error {
+  min-height: 20px;
+  margin: 8px 0 0 0;
+  color: #b42318;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.form-success {
+  min-height: 20px;
+  margin: 8px 0 0 0;
+  color: var(--green);
+  font-size: 0.9rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN FOR REGISTRATION FORM
+   ===================================================== */
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-button {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+}

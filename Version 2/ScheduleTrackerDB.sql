@@ -28,6 +28,10 @@ BEGIN
         EmpDept VARCHAR(100),
         EmpDeptID INT,
         EmpAddress VARCHAR(255),
+        EmpEmail VARCHAR(100),
+        EmpPhone VARCHAR(20),
+        EmpDesignation VARCHAR(100),
+        EmpStatus VARCHAR(20) DEFAULT 'Active',
         CreatedDate DATETIME DEFAULT GETDATE(),
         UpdatedDate DATETIME DEFAULT GETDATE()
     );
@@ -103,11 +107,11 @@ GO
 -- =====================================================
 
 -- Sample Employee Data
-INSERT INTO Employee (EmpFirstName, EmpMiddleName, EmpLastName, EmpName, EmpDOB, EmpDept, EmpDeptID, EmpAddress)
+INSERT INTO Employee (EmpFirstName, EmpMiddleName, EmpLastName, EmpName, EmpDOB, EmpDept, EmpDeptID, EmpAddress, EmpEmail, EmpPhone, EmpDesignation, EmpStatus)
 VALUES
-('Pranav', 'Kumar', 'Agarwal', 'Pranav Kumar Agarwal', '1990-05-15', 'IT', 101, '123 Main Street'),
-('John', 'Michael', 'Smith', 'John Michael Smith', '1988-03-22', 'HR', 102, '456 Oak Avenue'),
-('Sarah', 'Jane', 'Johnson', 'Sarah Jane Johnson', '1992-07-10', 'Finance', 103, '789 Pine Road');
+('Pranav', 'Kumar', 'Agarwal', 'Pranav Kumar Agarwal', '1990-05-15', 'IT', 101, '123 Main Street', 'pranav.agarwal@company.com', '+91-9876543210', 'Senior Developer', 'Active'),
+('John', 'Michael', 'Smith', 'John Michael Smith', '1988-03-22', 'HR', 102, '456 Oak Avenue', 'john.smith@company.com', '+91-9876543212', 'HR Manager', 'Active'),
+('Sarah', 'Jane', 'Johnson', 'Sarah Jane Johnson', '1992-07-10', 'Finance', 103, '789 Pine Road', 'sarah.johnson@company.com', '+91-9876543214', 'Finance Director', 'Active');
 GO
 
 -- Sample Login Data
