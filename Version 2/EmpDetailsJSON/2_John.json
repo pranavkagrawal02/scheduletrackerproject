@@ -1,0 +1,40 @@
+{
+  "empID": 2,
+  "empFirstName": "John",
+  "empLastName": "Smith",
+  "empFullName": "John Michael Smith",
+  "empDepartment": "HR",
+  "empPosition": "HR Manager",
+  "empEmail": "john.smith@company.com",
+  "empPhone": "+91-9876543212",
+  "empJoinDate": "2019-06-20",
+  "empStatus": "Active",
+  "empUsername": "john.smith",
+  "empPassword": "hashed_password_456",
+  "empDesignation": "HR Manager",
+  "createdAt": "2026-04-21",
+  "updatedAt": "2026-04-21",
+  "empImage": "john_profile.jpg",
+  "empAddress": "456 Corporate Avenue, Bangalore",
+  "empCity": "Bangalore",
+  "empState": "Karnataka",
+  "empZipCode": "560002",
+  "empCountry": "India",
+  "emergencyContact": {
+    "name": "Mary Smith",
+    "phone": "+91-9876543213",
+    "relation": "Wife"
+  },
+  "schedule": {
+    "workingDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "workingHours": "09:00-18:00",
+    "officeLocation": "Bangalore HQ"
+  },
+  "attendance": {
+    "presentDays": 245,
+    "absentDays": 5,
+    "leaveDays": 10
+  },
+  "notes": "Manages all HR operations and recruitment",
+  "isActive": true
+}

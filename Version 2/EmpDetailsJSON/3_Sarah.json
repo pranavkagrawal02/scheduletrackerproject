@@ -1,0 +1,40 @@
+{
+  "empID": 3,
+  "empFirstName": "Sarah",
+  "empLastName": "Johnson",
+  "empFullName": "Sarah Jane Johnson",
+  "empDepartment": "Finance",
+  "empPosition": "Finance Director",
+  "empEmail": "sarah.johnson@company.com",
+  "empPhone": "+91-9876543214",
+  "empJoinDate": "2018-03-10",
+  "empStatus": "Active",
+  "empUsername": "sarah.johnson",
+  "empPassword": "hashed_password_789",
+  "empDesignation": "Finance Director",
+  "createdAt": "2026-04-21",
+  "updatedAt": "2026-04-21",
+  "empImage": "sarah_profile.jpg",
+  "empAddress": "789 Finance Plaza, Bangalore",
+  "empCity": "Bangalore",
+  "empState": "Karnataka",
+  "empZipCode": "560003",
+  "empCountry": "India",
+  "emergencyContact": {
+    "name": "James Johnson",
+    "phone": "+91-9876543215",
+    "relation": "Brother"
+  },
+  "schedule": {
+    "workingDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "workingHours": "08:30-17:30",
+    "officeLocation": "Bangalore HQ"
+  },
+  "attendance": {
+    "presentDays": 248,
+    "absentDays": 2,
+    "leaveDays": 10
+  },
+  "notes": "Senior member of finance team, handles budget planning",
+  "isActive": true
+}

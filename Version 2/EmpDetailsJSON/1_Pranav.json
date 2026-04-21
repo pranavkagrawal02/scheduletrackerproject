@@ -1,0 +1,40 @@
+{
+  "empID": 1,
+  "empFirstName": "Pranav",
+  "empLastName": "Agarwal",
+  "empFullName": "Pranav Kumar Agarwal",
+  "empDepartment": "IT",
+  "empPosition": "Senior Developer",
+  "empEmail": "pranav.agarwal@company.com",
+  "empPhone": "+91-9876543210",
+  "empJoinDate": "2020-01-15",
+  "empStatus": "Active",
+  "empUsername": "pranav.agarwal",
+  "empPassword": "hashed_password_123",
+  "empDesignation": "Software Engineer",
+  "createdAt": "2026-04-21",
+  "updatedAt": "2026-04-21",
+  "empImage": "pranav_profile.jpg",
+  "empAddress": "123 Tech Street, Bangalore",
+  "empCity": "Bangalore",
+  "empState": "Karnataka",
+  "empZipCode": "560001",
+  "empCountry": "India",
+  "emergencyContact": {
+    "name": "Kumar Agarwal",
+    "phone": "+91-9876543211",
+    "relation": "Father"
+  },
+  "schedule": {
+    "workingDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "workingHours": "09:00-18:00",
+    "officeLocation": "Bangalore HQ"
+  },
+  "attendance": {
+    "presentDays": 240,
+    "absentDays": 8,
+    "leaveDays": 12
+  },
+  "notes": "High performer, leads frontend team",
+  "isActive": true
+}
